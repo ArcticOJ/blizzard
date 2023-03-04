@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Host       string            `yaml:"host"`
+	PrivateKey string            `yaml:"privateKey"`
 	Port       uint16            `yaml:"port"`
 	Debug      bool              `yaml:"debug"`
 	EnableCORS bool              `yaml:"cors"`
@@ -26,13 +27,14 @@ type DatabaseConfig struct {
 var DefaultConfig = map[string]interface{}{
 	"Host":              "0.0.0.0",
 	"Port":              2999,
-	"Database.Address":  "localhost:5432",
-	"Database.Username": "alphanecron",
-	"Database.Password": "necronthedev",
+	"Database.Address":  "",
+	"Database.Username": "",
+	"Database.Password": "",
 	"Database.Name":     "arctic",
 }
 
 func ReadConfig() *Config {
+	// TODO: Command line arguments, env config and config file
 	var conf []Config
 	f, e := os.ReadFile("config.yml")
 	if e != nil {

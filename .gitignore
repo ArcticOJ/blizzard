@@ -2,3 +2,4 @@ Caddyfile
 tmp/
 .idea/
 ._**
+config.yml

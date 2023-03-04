@@ -127,7 +127,7 @@ func CreateServer(config *core.Config) (server *models.Server) {
 	if config.Debug {
 		e.Use(middleware.Logger())
 	}
-	e.Use(middlewares.Authentication("necronuwu", server))
+	e.Use(middlewares.Authentication(config.PrivateKey, server))
 	for route, group := range Map {
 		g := e.Group(route)
 		for r, sub := range group {

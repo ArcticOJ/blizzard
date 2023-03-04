@@ -30,7 +30,7 @@ func Login(ctx *models.Context) models.Response {
 	if r, _ := argon2.VerifyEncoded([]byte(req.Password), []byte(user.Password)); !r {
 		return ctx.Bad("Wrong password.")
 	} else {
-		key := []byte("necronuwu")
+		key := []byte(ctx.Server.Config.PrivateKey)
 		now := time.Now()
 		lifespan := now.AddDate(0, 0, 1)
 		if req.RememberMe {
