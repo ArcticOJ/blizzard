@@ -1,0 +1,6 @@
+- model: User
+  rows:
+    - name: AlphaNecron
+      email: admin@xwork.space
+      organization: 'LLC'
+      created_at: '{{ now }}'
