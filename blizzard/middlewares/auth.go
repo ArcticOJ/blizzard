@@ -23,10 +23,10 @@ func Authentication(secret string, server *models.Server) echo.MiddlewareFunc {
 				return next(c)
 			}
 			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
-				authToken := strings.TrimSpace(strings.TrimSuffix(authHeader, "Bearer"))
+				authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 				if len(authToken) > 0 {
 					var user shared.User
-					if e := server.Database.NewSelect().Model(&user).Where("apiKey = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
+					if e := server.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
 						c.Set("user", user.ID)
 						return next(c)
 					}

@@ -24,21 +24,24 @@ func ApiKey(ctx *models.Context) models.Response {
 	switch ctx.Method() {
 	case models.Get:
 		return ctx.Respond(echo.Map{
-			"apiKey": ctx.GetUser("apiKey").ApiKey,
+			"apiKey": ctx.GetUser("api_key").ApiKey,
 		})
 	case models.Patch:
 		uuid := ctx.GetUUID()
 		now := strings.TrimRight(base64.StdEncoding.EncodeToString([]byte(strconv.FormatInt(time.Now().UTC().Unix(), 10))), "=")
-		apiKey, e := GenerateApiKey(8)
+		hash, e := GenerateApiKey(8)
 		if e != nil {
 			return ctx.InternalServerError("Could not generate an API key.")
 		}
+		apiKey := "arctic." + hash + now
 		if _, e := ctx.Server.Database.NewUpdate().Model(&shared.User{
-			ApiKey: "arctic." + apiKey + now,
-		}).Column("apiKey").Where("id = ?", uuid).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
+			ApiKey: apiKey,
+		}).Column("api_key").Where("id = ?", uuid).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
 			return ctx.InternalServerError("Could not update your API key.")
 		}
-		return ctx.Success()
+		return ctx.Respond(echo.Map{
+			"apiKey": apiKey,
+		})
 	}
 	return nil
 }

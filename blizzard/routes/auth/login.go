@@ -32,10 +32,7 @@ func Login(ctx *models.Context) models.Response {
 	} else {
 		key := []byte(ctx.Server.Config.PrivateKey)
 		now := time.Now()
-		lifespan := now.AddDate(0, 0, 1)
-		if req.RememberMe {
-			lifespan = lifespan.AddDate(0, 0, 29)
-		}
+		lifespan := now.AddDate(0, 0, 30)
 		ss := &models.Session{
 			UUID: user.ID,
 			RegisteredClaims: jwt.RegisteredClaims{
@@ -50,7 +47,7 @@ func Login(ctx *models.Context) models.Response {
 		if e != nil {
 			return ctx.InternalServerError("Could not create a new session.")
 		}
-		ctx.PutCookie("session", signedToken, lifespan)
+		ctx.PutCookie("session", signedToken, lifespan, req.RememberMe)
 		return ctx.Success()
 	}
 }

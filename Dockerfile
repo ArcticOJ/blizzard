@@ -12,8 +12,6 @@ RUN go build -o ./out/blizzard -ldflags "-s -w" main.go
 FROM alpine AS runner
 WORKDIR /polar
 
-EXPOSE 3000/tcp
-
 COPY --from=builder /usr/src/app/out/blizzard ./
 
 ENTRYPOINT ["/blizzard/blizzard"]

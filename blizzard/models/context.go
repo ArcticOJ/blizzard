@@ -81,7 +81,7 @@ func (ctx Context) GetUser(columns ...string) *shared.User {
 	var user shared.User
 	query := ctx.Server.Database.NewSelect().Model(&user).Where("id = ?", id)
 	if len(columns) == 0 {
-		query = query.ExcludeColumn("password", "apiKey")
+		query = query.ExcludeColumn("password", "api_key")
 	} else {
 		query = query.Column(columns...)
 	}
@@ -92,13 +92,17 @@ func (ctx Context) GetUser(columns ...string) *shared.User {
 	return &user
 }
 
-func (ctx Context) PutCookie(name string, value string, exp time.Time) {
+func (ctx Context) PutCookie(name string, value string, exp time.Time, sessionOnly bool) {
 	cookie := new(http.Cookie)
 	cookie.Name = name
 	cookie.Value = value
-	cookie.Expires = exp
+	if !sessionOnly {
+		cookie.Expires = exp
+	}
 	cookie.SameSite = http.SameSiteLaxMode
 	cookie.Path = "/"
+	// TODO: add secure property to config
+	cookie.Secure = true
 	ctx.SetCookie(cookie)
 }
 
