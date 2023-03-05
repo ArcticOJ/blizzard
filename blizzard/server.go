@@ -7,6 +7,7 @@ import (
 	"backend/blizzard/models"
 	"backend/blizzard/pb"
 	"backend/blizzard/routes/auth"
+	"backend/blizzard/routes/auth/oauth"
 	"backend/blizzard/routes/contests"
 	"backend/blizzard/routes/feeds"
 	"backend/blizzard/routes/problems"
@@ -29,12 +30,13 @@ import (
 )
 
 var Map = map[string]models.RouteMap{
-	"/problems": problems.Map,
-	"/feeds":    feeds.Map,
-	"/contests": contests.Map,
-	"/auth":     auth.Map,
-	"/user":     user.Map,
-	"/":         root.Map,
+	"/problems":   problems.Map,
+	"/feeds":      feeds.Map,
+	"/contests":   contests.Map,
+	"/auth":       auth.Map,
+	"/auth/oauth": oauth.Map,
+	"/user":       user.Map,
+	"/":           root.Map,
 }
 
 func createHandler(server *models.Server, handler models.Handler) echo.HandlerFunc {
@@ -65,7 +67,8 @@ func createDb(config core.DatabaseConfig, debug bool) *bun.DB {
 	if debug {
 		log := logrus.New()
 		db.AddQueryHook(logrusbun.NewQueryHook(logrusbun.QueryHookOptions{
-			Logger: log,
+			LogSlow: time.Nanosecond,
+			Logger:  log,
 		}))
 	}
 	return db

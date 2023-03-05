@@ -24,15 +24,6 @@ type DatabaseConfig struct {
 	DatabaseName string `yaml:"name"`
 }
 
-var DefaultConfig = map[string]interface{}{
-	"Host":              "0.0.0.0",
-	"Port":              2999,
-	"Database.Address":  "",
-	"Database.Username": "",
-	"Database.Password": "",
-	"Database.Name":     "arctic",
-}
-
 func ReadConfig() *Config {
 	// TODO: Command line arguments, env config and config file
 	var conf []Config

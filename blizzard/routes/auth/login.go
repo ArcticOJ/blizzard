@@ -39,7 +39,7 @@ func Login(ctx *models.Context) models.Response {
 		ss := &models.Session{
 			UUID: user.ID,
 			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(lifespan.AddDate(0, 0, 29)),
+				ExpiresAt: jwt.NewNumericDate(lifespan),
 				IssuedAt:  jwt.NewNumericDate(now),
 				NotBefore: jwt.NewNumericDate(now),
 				Issuer:    "Project Arctic",

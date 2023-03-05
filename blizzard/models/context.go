@@ -2,6 +2,7 @@ package models
 
 import (
 	"backend/blizzard/db/models/shared"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
@@ -60,13 +61,31 @@ func (ctx Context) Success() Response {
 	})
 }
 
-func (ctx Context) GetUser() *shared.User {
-	uuid := ctx.Get("user")
-	if uuid == nil {
+func (ctx Context) GetUUID() *uuid.UUID {
+	id := ctx.Get("user")
+	if id == nil {
+		return nil
+	}
+	if uid, ok := id.(uuid.UUID); !ok {
+		return nil
+	} else {
+		return &uid
+	}
+}
+
+func (ctx Context) GetUser(columns ...string) *shared.User {
+	id := ctx.GetUUID()
+	if id == nil {
 		return nil
 	}
 	var user shared.User
-	e := ctx.Server.Database.NewSelect().Model(&user).Where("id = ?", uuid).ExcludeColumn("password").Scan(ctx.Request().Context())
+	query := ctx.Server.Database.NewSelect().Model(&user).Where("id = ?", id)
+	if len(columns) == 0 {
+		query = query.ExcludeColumn("password", "apiKey")
+	} else {
+		query = query.Column(columns...)
+	}
+	e := query.Scan(ctx.Request().Context())
 	if e != nil {
 		return nil
 	}

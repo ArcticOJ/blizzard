@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"backend/blizzard/db/models/shared"
 	"backend/blizzard/models"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
@@ -9,6 +10,7 @@ import (
 )
 
 func invalidate(ctx models.Context) error {
+	ctx.Set("user", nil)
 	ctx.DeleteCookie("session")
 	return ctx.JSONPretty(401, ctx.Unauthorized().Body(), "\t")
 }
@@ -17,9 +19,18 @@ func Authentication(secret string, server *models.Server) echo.MiddlewareFunc {
 	key := []byte(secret)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			c.Set("user", nil)
 			if strings.HasPrefix(c.Path(), "/auth/") {
 				return next(c)
+			}
+			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
+				authToken := strings.TrimSpace(strings.TrimSuffix(authHeader, "Bearer"))
+				if len(authToken) > 0 {
+					var user shared.User
+					if e := server.Database.NewSelect().Model(&user).Where("apiKey = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
+						c.Set("user", user.ID)
+						return next(c)
+					}
+				}
 			}
 			ctx := models.Context{
 				Server:  server,
@@ -31,7 +42,7 @@ func Authentication(secret string, server *models.Server) echo.MiddlewareFunc {
 			}
 			token, err := jwt.ParseWithClaims(jt.Value, &models.Session{}, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 				}
 				return key, nil
 			})
