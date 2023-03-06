@@ -47,7 +47,7 @@ func Login(ctx *models.Context) models.Response {
 		if e != nil {
 			return ctx.InternalServerError("Could not create a new session.")
 		}
-		ctx.PutCookie("session", signedToken, lifespan, req.RememberMe)
+		ctx.PutCookie("session", signedToken, lifespan, !req.RememberMe)
 		return ctx.Success()
 	}
 }
