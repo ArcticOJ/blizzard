@@ -7,14 +7,17 @@ import (
 	"time"
 )
 
-type PolarClient struct {
-	pb.DRPCPolarClient
-	Address string `json:"-"`
-}
+type (
+	IglooClient struct {
+		pb.DRPCIglooClient
+		Address string `json:"-"`
+	}
+	IglooClusters = map[string]IglooClient
+)
 
-func (client *PolarClient) Ping(ctx context.Context) (health *pb.PolarHealth, responseTime float64) {
+func (client *IglooClient) Ping(ctx context.Context) (health *pb.IglooHealth, responseTime float64) {
 	start := time.Now()
-	if client.DRPCPolarClient == nil {
+	if client.DRPCIglooClient == nil {
 		return nil, -1
 	}
 	health, e := client.Health(ctx, nil)

@@ -20,9 +20,9 @@ type JudgeInfo struct {
 func Health(ctx *models.Context) models.Response {
 	ctx.Response().Header().Add("Timing-Allow-Origin", "*")
 	var judgesInfo []JudgeInfo
-	for name, client := range ctx.Server.Polar {
+	for name, client := range ctx.Server.Igloo {
 		health, respTime := client.Ping(ctx.Request().Context())
-		if health == nil || client.DRPCPolarClient == nil {
+		if health == nil || client.DRPCIglooClient == nil {
 			judgesInfo = append(judgesInfo, JudgeInfo{
 				Name:    name,
 				IsAlive: false,

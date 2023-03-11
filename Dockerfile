@@ -10,7 +10,7 @@ COPY . .
 RUN go build -o ./out/blizzard -ldflags "-s -w" main.go
 
 FROM alpine AS runner
-WORKDIR /polar
+WORKDIR /igloo
 
 COPY --from=builder /usr/src/app/out/blizzard ./
 

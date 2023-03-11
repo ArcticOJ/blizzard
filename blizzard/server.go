@@ -74,12 +74,12 @@ func createDb(config core.DatabaseConfig, debug bool) *bun.DB {
 	return db
 }
 
-func initClients(addrs map[string]string) (clients map[string]models.PolarClient) {
-	clients = make(map[string]models.PolarClient)
+func initClients(addrs map[string]string) (clusters models.IglooClusters) {
+	clusters = make(models.IglooClusters)
 	for name, addr := range addrs {
 		// TODO: Periodically check whether the server is online and update
-		clients[name] = models.PolarClient{
-			DRPCPolarClient: nil,
+		clusters[name] = models.IglooClient{
+			DRPCIglooClient: nil,
 			Address:         addr,
 		}
 		dial, e := net.DialTimeout("tcp", addr, time.Second*3)
@@ -91,12 +91,12 @@ func initClients(addrs map[string]string) (clients map[string]models.PolarClient
 		if e != nil {
 			logrus.Error(e)
 		}
-		if client, ok := clients[name]; ok {
-			client.DRPCPolarClient = pb.NewDRPCPolarClient(conn)
-			clients[name] = client
+		if client, ok := clusters[name]; ok {
+			client.DRPCIglooClient = pb.NewDRPCIglooClient(conn)
+			clusters[name] = client
 		}
 	}
-	for name := range clients {
+	for name := range clusters {
 		fmt.Println(name)
 	}
 	return
@@ -110,7 +110,7 @@ func CreateServer(config *core.Config) (server *models.Server) {
 		Database:      createDb(config.Database, config.Debug),
 		BootTimestamp: bootTimestamp,
 		Config:        config,
-		Polar:         initClients(config.Judges),
+		Igloo:         initClients(config.Judges),
 	}
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		code, message := http.StatusInternalServerError, "Internal Server Error"

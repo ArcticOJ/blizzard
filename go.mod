@@ -21,7 +21,6 @@ require (
 )
 
 require (
-	github.com/cristalhq/base64 v0.1.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect

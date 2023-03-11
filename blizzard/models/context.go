@@ -111,6 +111,7 @@ func (ctx Context) DeleteCookie(name string) {
 	cookie.Name = name
 	cookie.Value = ""
 	cookie.Expires = time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
+	cookie.MaxAge = -1
 	cookie.SameSite = http.SameSiteLaxMode
 	cookie.Path = "/"
 	ctx.SetCookie(cookie)
