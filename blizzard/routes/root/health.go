@@ -9,46 +9,45 @@ import (
 )
 
 type JudgeInfo struct {
-	Name    string             `json:"name"`
-	IsAlive bool               `json:"isAlive"`
-	Latency float64            `json:"latency"`
-	Uptime  int64              `json:"uptime"`
-	Version string             `json:"version"`
-	Specs   *pb.Specifications `json:"specs,omitempty"`
+	Name    string  `json:"name"`
+	IsAlive bool    `json:"isAlive"`
+	Latency float64 `json:"latency"`
+	Uptime  int64   `json:"uptime"`
+	*pb.InstanceSpecification
 }
 
 func Health(ctx *models.Context) models.Response {
 	ctx.Response().Header().Add("Timing-Allow-Origin", "*")
 	var judgesInfo []JudgeInfo
-	for name, client := range ctx.Server.Igloo {
-		health, respTime := client.Ping(ctx.Request().Context())
-		if health == nil || client.DRPCIglooClient == nil {
+	for name := range ctx.Igloo {
+		client, ok := models.Renew(ctx.Request().Context(), ctx.Igloo, name)
+		if !ok {
 			judgesInfo = append(judgesInfo, JudgeInfo{
 				Name:    name,
 				IsAlive: false,
 				Latency: -1,
 				Uptime:  -1,
-				Version: "Unknown",
-				Specs:   nil,
 			})
 			continue
 		}
+		specs, respTime := client.Ping(ctx.Request().Context())
 		now := time.Now().UTC()
-		judgesInfo = append(judgesInfo, JudgeInfo{
-			Name:    name,
-			IsAlive: true,
-			Latency: respTime,
-			Uptime:  now.Unix() - health.BootTimestamp.Seconds,
-			Version: health.Version,
-			Specs:   health.Specs,
-		})
+		info := JudgeInfo{
+			Name:                  name,
+			IsAlive:               true,
+			Latency:               respTime,
+			Uptime:                now.Unix() - specs.BootTimestamp.Seconds,
+			InstanceSpecification: specs,
+		}
+		info.BootTimestamp = nil
+		judgesInfo = append(judgesInfo, info)
 	}
 	if judgesInfo == nil {
 		judgesInfo = []JudgeInfo{}
 	}
 	return ctx.Respond(echo.Map{
 		"version": build.Version,
-		"uptime":  ctx.Server.Uptime(),
+		"uptime":  ctx.Uptime(),
 		"judges":  judgesInfo,
 	})
 }

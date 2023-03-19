@@ -16,5 +16,6 @@ type User struct {
 	Organization  string    `bun:"organization" json:"organization,omitempty"`
 	RegisteredAt  time.Time `bun:"registered_at,nullzero,type:timestamptz,notnull,default:'now()'::timestamptz" json:"registeredAt,omitempty"`
 	ApiKey        string    `bun:"api_key" json:"apiKey,omitempty"`
+	Avatar        string    `bun:"-" json:"avatar"`
 	//LastLogin     time.Time `bun:"lastLogin,nullzero,type:timestamptz" json:"lastLogin"`
 }

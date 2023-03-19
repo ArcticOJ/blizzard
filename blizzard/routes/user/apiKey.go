@@ -34,7 +34,7 @@ func ApiKey(ctx *models.Context) models.Response {
 			return ctx.InternalServerError("Could not generate an API key.")
 		}
 		apiKey := "arctic." + hash + now
-		if _, e := ctx.Server.Database.NewUpdate().Model(&shared.User{
+		if _, e := ctx.Database.NewUpdate().Model(&shared.User{
 			ApiKey: apiKey,
 		}).Column("api_key").Where("id = ?", uuid).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
 			return ctx.InternalServerError("Could not update your API key.")

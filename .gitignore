@@ -1,5 +1,5 @@
 Caddyfile
 tmp/
 .idea/
-._**
+**/._**
 config.yml

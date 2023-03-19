@@ -1,13 +1,13 @@
-- host: 0.0.0.0
-  privateKey: private_key_used_to_hash_password
-  port: 2999
-  debug: false
-  cors: true
-  rateLimit: 1000
-  judges:
-    north-pole: 0.0.0.0:172
-  database:
-    address: db_addr
-    username: db_username
-    password: db_pwd
-    name: db_name
+host: 0.0.0.0
+privateKey: private_key_used_to_hash_password
+port: 2999
+debug: false
+cors: true
+rateLimit: 1000
+judges:
+  north-pole: 0.0.0.0:172
+database:
+  address: db_addr
+  username: db_username
+  password: db_pwd
+  name: db_name

@@ -4,11 +4,9 @@ import (
 	"backend/blizzard/db/models/problems"
 	"backend/blizzard/db/models/shared"
 	"backend/blizzard/models"
-	"fmt"
 )
 
 func Problem(ctx *models.Context) models.Response {
-	fmt.Println(ctx.Param("problem"))
 	return ctx.Respond(problems.Problem{
 		Id:      "hello-world",
 		Title:   "Hello World",

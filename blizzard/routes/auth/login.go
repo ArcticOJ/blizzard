@@ -24,13 +24,13 @@ func Login(ctx *models.Context) models.Response {
 		return ctx.Bad("Malformed credentials.")
 	}
 	var user shared.User
-	if e := ctx.Server.Database.NewSelect().Model(&user).Where("handle = ?", req.Handle).WhereOr("email = ?", req.Handle).Column("id", "password").Scan(ctx.Request().Context()); e != nil {
+	if e := ctx.Database.NewSelect().Model(&user).Where("handle = ?", req.Handle).WhereOr("email = ?", req.Handle).Column("id", "password").Scan(ctx.Request().Context()); e != nil {
 		return ctx.NotFound("User not found.")
 	}
 	if r, _ := argon2.VerifyEncoded([]byte(req.Password), []byte(user.Password)); !r {
 		return ctx.Bad("Wrong password.")
 	} else {
-		key := []byte(ctx.Server.Config.PrivateKey)
+		key := []byte(ctx.Config.PrivateKey)
 		now := time.Now()
 		lifespan := now.AddDate(0, 0, 30)
 		ss := &models.Session{

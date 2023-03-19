@@ -26,14 +26,14 @@ type DatabaseConfig struct {
 
 func ReadConfig() *Config {
 	// TODO: Command line arguments, env config and config file
-	var conf []Config
+	var conf Config
 	f, e := os.ReadFile("config.yml")
 	if e != nil {
 		log.Fatalln(e)
 		return nil
 	}
 	yaml.Unmarshal(f, &conf)
-	return &conf[0]
+	return &conf
 	/*v := viper.New()
 	v.SetConfigName("blizzard")
 	v.SetConfigType("yaml")

@@ -10,7 +10,7 @@ import (
 
 type Context struct {
 	echo.Context
-	Server *Server
+	*Server
 }
 
 func (ctx Context) Err(code int, message string, context *interface{}) Response {
@@ -79,7 +79,7 @@ func (ctx Context) GetUser(columns ...string) *shared.User {
 		return nil
 	}
 	var user shared.User
-	query := ctx.Server.Database.NewSelect().Model(&user).Where("id = ?", id)
+	query := ctx.Database.NewSelect().Model(&user).Where("id = ?", id)
 	if len(columns) == 0 {
 		query = query.ExcludeColumn("password", "api_key")
 	} else {

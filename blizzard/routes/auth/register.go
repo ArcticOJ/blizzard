@@ -29,7 +29,7 @@ func Register(ctx *models.Context) models.Response {
 	if e != nil {
 		return ctx.InternalServerError("Could not hash provided password.")
 	}
-	_, err := ctx.Server.Database.NewInsert().Model(&shared.User{
+	_, err := ctx.Database.NewInsert().Model(&shared.User{
 		DisplayName:  req.DisplayName,
 		Handle:       req.Handle,
 		Email:        req.Email,

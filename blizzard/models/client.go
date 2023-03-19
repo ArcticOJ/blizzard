@@ -3,7 +3,8 @@ package models
 import (
 	"backend/blizzard/pb"
 	"context"
-	"github.com/sirupsen/logrus"
+	"go.arsenm.dev/drpc/muxconn"
+	"net"
 	"time"
 )
 
@@ -12,16 +13,36 @@ type (
 		pb.DRPCIglooClient
 		Address string `json:"-"`
 	}
-	IglooClusters = map[string]IglooClient
+	IglooCluster = map[string]IglooClient
 )
 
-func (client *IglooClient) Ping(ctx context.Context) (health *pb.IglooHealth, responseTime float64) {
-	start := time.Now()
-	if client.DRPCIglooClient == nil {
-		return nil, -1
+func Renew(ctx context.Context, cluster IglooCluster, name string) (*IglooClient, bool) {
+	if client, ok := cluster[name]; ok {
+		if client.DRPCIglooClient != nil {
+			alive, e := client.Alive(ctx, nil)
+			if e != nil {
+				_ = client.DRPCConn().Close()
+			} else if alive.GetValue() {
+				return &client, true
+			}
+		}
+		dial, e := net.DialTimeout("tcp", client.Address, time.Millisecond*250)
+		if e != nil {
+			return nil, false
+		}
+		conn, e := muxconn.New(dial)
+		if e == nil {
+			client.DRPCIglooClient = pb.NewDRPCIglooClient(conn)
+			cluster[name] = client
+			return &client, true
+		}
 	}
-	health, e := client.Health(ctx, nil)
-	logrus.Error(e)
+	return nil, false
+}
+
+func (client *IglooClient) Ping(ctx context.Context) (specs *pb.InstanceSpecification, responseTime float64) {
+	start := time.Now()
+	specs, e := client.Specification(ctx, nil)
 	if e != nil {
 		return nil, -1
 	}

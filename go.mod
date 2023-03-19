@@ -8,8 +8,7 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/labstack/echo/v4 v4.10.0
 	github.com/matthewhartstonge/argon2 v0.3.2
-	github.com/oiime/logrusbun v0.1.1
-	github.com/sirupsen/logrus v1.9.0
+	github.com/rs/zerolog v1.28.0
 	github.com/uptrace/bun v1.1.10
 	github.com/uptrace/bun/dialect/pgdialect v1.1.10
 	github.com/uptrace/bun/driver/pgdriver v1.1.10

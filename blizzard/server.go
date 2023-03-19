@@ -14,11 +14,9 @@ import (
 	"backend/blizzard/routes/root"
 	"backend/blizzard/routes/user"
 	"database/sql"
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/oiime/logrusbun"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -26,6 +24,7 @@ import (
 	"golang.org/x/time/rate"
 	"net"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -65,39 +64,27 @@ func createDb(config core.DatabaseConfig, debug bool) *bun.DB {
 		pgdriver.WithInsecure(true)))
 	db := bun.NewDB(psql, pgdialect.New())
 	if debug {
-		log := logrus.New()
-		db.AddQueryHook(logrusbun.NewQueryHook(logrusbun.QueryHookOptions{
-			LogSlow: time.Nanosecond,
-			Logger:  log,
-		}))
+		// TODO: hook logger after queries
 	}
 	return db
 }
 
-func initClients(addrs map[string]string) (clusters models.IglooClusters) {
-	clusters = make(models.IglooClusters)
+func initClients(addrs map[string]string) (cluster models.IglooCluster) {
+	cluster = make(models.IglooCluster)
 	for name, addr := range addrs {
-		// TODO: Periodically check whether the server is online and update
-		clusters[name] = models.IglooClient{
+		cluster[name] = models.IglooClient{
 			DRPCIglooClient: nil,
 			Address:         addr,
 		}
 		dial, e := net.DialTimeout("tcp", addr, time.Second*3)
 		if e != nil {
-			logrus.Error(e)
 			continue
 		}
-		conn, e := muxconn.New(dial)
-		if e != nil {
-			logrus.Error(e)
-		}
-		if client, ok := clusters[name]; ok {
+		conn, _ := muxconn.New(dial)
+		if client, ok := cluster[name]; ok {
 			client.DRPCIglooClient = pb.NewDRPCIglooClient(conn)
-			clusters[name] = client
+			cluster[name] = client
 		}
-	}
-	for name := range clusters {
-		fmt.Println(name)
 	}
 	return
 }
@@ -111,6 +98,7 @@ func CreateServer(config *core.Config) (server *models.Server) {
 		BootTimestamp: bootTimestamp,
 		Config:        config,
 		Igloo:         initClients(config.Judges),
+		Logger:        zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}),
 	}
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		code, message := http.StatusInternalServerError, "Internal Server Error"
@@ -128,7 +116,17 @@ func CreateServer(config *core.Config) (server *models.Server) {
 		e.Use(middleware.CORS())
 	}
 	if config.Debug {
-		e.Use(middleware.Logger())
+		e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+			LogURI:    true,
+			LogStatus: true,
+			LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+				server.Logger.Debug().
+					Str("URI", v.URI).
+					Int("status", v.Status).
+					Msg("request")
+				return nil
+			},
+		}))
 	}
 	e.Use(middlewares.Authentication(config.PrivateKey, server))
 	for route, group := range Map {
