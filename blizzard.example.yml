@@ -1,0 +1,21 @@
+host: 0.0.0.0
+port: 2999
+privateKey: private_key_used_to_hash_password
+debug: false
+enableCors: true
+rateLimit: 1000
+judges:
+  north-pole: 0.0.0.0:172
+oauth:
+  github:
+    clientId: your_github_client_id
+    clientSecret: your_github_client_secret
+  discord:
+    clientId: your_discord_client_id
+    clientSecret: your_discord_client_secret
+database:
+  secure: false
+  address: db_addr
+  username: db_username
+  password: db_pwd
+  name: db_name

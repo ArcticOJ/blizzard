@@ -1,8 +1,11 @@
 package user
 
-import "backend/blizzard/models"
+import (
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
+)
 
-var Map = models.RouteMap{
+var Map = extra.RouteMap{
 	"/": {
 		Methods: []models.Method{models.Get, models.Post},
 		Handler: Index,

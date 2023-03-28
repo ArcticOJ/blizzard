@@ -2,5 +2,5 @@
 tmp/
 **/._**
 .secrets
-config.yml
+blizzard.yml
 .git/

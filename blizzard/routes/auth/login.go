@@ -1,8 +1,11 @@
 package auth
 
 import (
-	"backend/blizzard/db/models/shared"
-	"backend/blizzard/models"
+	"blizzard/blizzard/config"
+	"blizzard/blizzard/db"
+	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/matthewhartstonge/argon2"
 	"time"
@@ -18,21 +21,21 @@ type (
 
 // TODO: Validate req before processing
 
-func Login(ctx *models.Context) models.Response {
+func Login(ctx *extra.Context) models.Response {
 	var req LoginForm
 	if ctx.Bind(&req) != nil {
 		return ctx.Bad("Malformed credentials.")
 	}
 	var user shared.User
-	if e := ctx.Database.NewSelect().Model(&user).Where("handle = ?", req.Handle).WhereOr("email = ?", req.Handle).Column("id", "password").Scan(ctx.Request().Context()); e != nil {
+	if e := db.Database.NewSelect().Model(&user).Where("handle = ?", req.Handle).WhereOr("email = ?", req.Handle).Column("id", "password").Scan(ctx.Request().Context()); e != nil {
 		return ctx.NotFound("User not found.")
 	}
 	if r, _ := argon2.VerifyEncoded([]byte(req.Password), []byte(user.Password)); !r {
 		return ctx.Bad("Wrong password.")
 	} else {
-		key := []byte(ctx.Config.PrivateKey)
+		key := []byte(config.Config.PrivateKey)
 		now := time.Now()
-		lifespan := now.AddDate(0, 0, 30)
+		lifespan := now.AddDate(0, 1, 0)
 		ss := &models.Session{
 			UUID: user.ID,
 			RegisteredClaims: jwt.RegisteredClaims{

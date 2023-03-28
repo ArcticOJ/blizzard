@@ -1,12 +1,13 @@
 package problems
 
 import (
-	"backend/blizzard/db/models/problems"
-	"backend/blizzard/db/models/shared"
-	"backend/blizzard/models"
+	"blizzard/blizzard/db/models/problems"
+	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
 )
 
-func Index(ctx *models.Context) models.Response {
+func Index(ctx *extra.Context) models.Response {
 	author := shared.Author{
 		Id:       "130139",
 		Username: "AlphaNecron",

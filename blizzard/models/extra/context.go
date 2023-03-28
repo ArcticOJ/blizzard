@@ -1,7 +1,9 @@
-package models
+package extra
 
 import (
-	"backend/blizzard/db/models/shared"
+	"blizzard/blizzard/db"
+	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/models"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -10,52 +12,55 @@ import (
 
 type Context struct {
 	echo.Context
-	*Server
 }
 
-func (ctx Context) Err(code int, message string, context *interface{}) Response {
-	return &Error{Code: code, Message: message, Context: context}
+func (ctx Context) Err(code int, message string, context *interface{}) models.Response {
+	return &models.Error{Code: code, Message: message, Context: context}
 }
 
-func (ctx Context) Respond(data interface{}) Response {
-	return &JsonResponse{200, data}
+func (ctx Context) Respond(data interface{}) models.Response {
+	return &models.JsonResponse{Code: 200, Content: data}
 }
 
-func (ctx Context) Method() Method {
-	return MethodFromString(ctx.Request().Method)
+func (ctx Context) Method() models.Method {
+	return models.MethodFromString(ctx.Request().Method)
 }
 
-func (ctx Context) Arr(arr ...interface{}) Response {
+func (ctx Context) Arr(arr ...interface{}) models.Response {
 	return ctx.Respond(arr)
 }
 
-func (ctx Context) StreamResponse() *ResponseStream {
-	ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	ctx.Response().WriteHeader(http.StatusOK)
-	return New(ctx.Response())
+func (ctx Context) StreamResponse() *models.ResponseStream {
+	r := ctx.Response()
+	h := r.Header()
+	h.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	h.Set("Transfer-Encoding", "chunked")
+	h.Set("Connection", "keep-alive")
+	r.WriteHeader(http.StatusOK)
+	return models.New(r)
 }
 
-func (ctx Context) Bad(message string) Response {
+func (ctx Context) Bad(message string) models.Response {
 	return ctx.Err(400, message, nil)
 }
 
-func (ctx Context) Unauthorized() Response {
+func (ctx Context) Unauthorized() models.Response {
 	return ctx.Err(401, "Unauthorized.", nil)
 }
 
-func (ctx Context) Forbid(message string) Response {
+func (ctx Context) Forbid(message string) models.Response {
 	return ctx.Err(403, message, nil)
 }
 
-func (ctx Context) NotFound(message string) Response {
+func (ctx Context) NotFound(message string) models.Response {
 	return ctx.Err(404, message, nil)
 }
 
-func (ctx Context) InternalServerError(message string) Response {
+func (ctx Context) InternalServerError(message string) models.Response {
 	return ctx.Err(500, message, nil)
 }
 
-func (ctx Context) Success() Response {
+func (ctx Context) Success() models.Response {
 	return ctx.Respond(echo.Map{
 		"success": true,
 	})
@@ -79,7 +84,7 @@ func (ctx Context) GetUser(columns ...string) *shared.User {
 		return nil
 	}
 	var user shared.User
-	query := ctx.Database.NewSelect().Model(&user).Where("id = ?", id)
+	query := db.Database.NewSelect().Model(&user).Where("id = ?", id)
 	if len(columns) == 0 {
 		query = query.ExcludeColumn("password", "api_key")
 	} else {

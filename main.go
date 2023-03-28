@@ -1,11 +1,29 @@
 package main
 
 import (
-	"backend/blizzard"
-	"backend/blizzard/core"
+	"blizzard/blizzard/config"
+	"blizzard/blizzard/db"
+	"blizzard/blizzard/judge"
+	"blizzard/blizzard/logger"
+	"blizzard/blizzard/oauth"
+	"blizzard/blizzard/server"
+	"blizzard/blizzard/server/utils"
 )
 
+func init() {
+	logger.Init()
+}
+
+func init() {
+	config.Load()
+}
+
+func init() {
+	db.Init()
+	judge.Init()
+	oauth.Init()
+}
+
 func main() {
-	c := core.ReadConfig()
-	blizzard.CreateServer(c).Listen()
+	utils.Listen(server.CreateServer())
 }

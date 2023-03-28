@@ -1,7 +1,7 @@
 package problems
 
 import (
-	"backend/blizzard/db/models/shared"
+	"blizzard/blizzard/db/models/shared"
 )
 
 type Problem struct {

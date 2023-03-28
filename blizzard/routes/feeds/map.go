@@ -1,15 +1,18 @@
 package feeds
 
-import "backend/blizzard/models"
+import (
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
+)
 
-var Map = models.RouteMap{
+var Map = extra.RouteMap{
 	"/": {
 		Methods: []models.Method{models.Get, models.Post},
 		Handler: Index,
 	},
 	"/:id": {
 		Methods: []models.Method{models.Get, models.Patch, models.Delete},
-		Handler: func(ctx *models.Context) models.Response {
+		Handler: func(ctx *extra.Context) models.Response {
 			return nil
 		},
 	},

@@ -1,9 +1,11 @@
 package auth
 
 import (
-	"backend/blizzard/core"
-	"backend/blizzard/db/models/shared"
-	"backend/blizzard/models"
+	"blizzard/blizzard/core"
+	"blizzard/blizzard/db"
+	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
 	"github.com/jackc/pgerrcode"
 	"github.com/uptrace/bun/driver/pgdriver"
 )
@@ -20,7 +22,7 @@ type (
 
 // TODO: Validate req before processing
 
-func Register(ctx *models.Context) models.Response {
+func Register(ctx *extra.Context) models.Response {
 	var req RegisterForm
 	if ctx.Bind(&req) != nil {
 		return ctx.Bad("Malformed request payload.")
@@ -29,7 +31,7 @@ func Register(ctx *models.Context) models.Response {
 	if e != nil {
 		return ctx.InternalServerError("Could not hash provided password.")
 	}
-	_, err := ctx.Database.NewInsert().Model(&shared.User{
+	_, err := db.Database.NewInsert().Model(&shared.User{
 		DisplayName:  req.DisplayName,
 		Handle:       req.Handle,
 		Email:        req.Email,

@@ -1,4 +1,4 @@
-package models
+package extra
 
 type Group struct {
 	SubRoutes []Route

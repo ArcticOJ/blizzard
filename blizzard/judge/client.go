@@ -1,7 +1,7 @@
-package models
+package judge
 
 import (
-	"backend/blizzard/pb"
+	"blizzard/blizzard/pb"
 	"context"
 	"go.arsenm.dev/drpc/muxconn"
 	"net"
@@ -26,7 +26,7 @@ func Renew(ctx context.Context, cluster IglooCluster, name string) (*IglooClient
 				return &client, true
 			}
 		}
-		dial, e := net.DialTimeout("tcp", client.Address, time.Millisecond*250)
+		dial, e := net.DialTimeout("tcp", client.Address, time.Millisecond*200)
 		if e != nil {
 			return nil, false
 		}

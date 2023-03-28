@@ -1,8 +1,11 @@
 package auth
 
-import "backend/blizzard/models"
+import (
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
+)
 
-func Logout(ctx *models.Context) models.Response {
+func Logout(ctx *extra.Context) models.Response {
 	ctx.Set("user", nil)
 	ctx.DeleteCookie("session")
 	return ctx.Success()

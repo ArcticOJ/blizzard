@@ -1,8 +1,11 @@
 package contests
 
-import "backend/blizzard/models"
+import (
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
+)
 
-var Map = models.RouteMap{
+var Map = extra.RouteMap{
 	"/:id/submit": {
 		Methods: []models.Method{models.Post, models.Get},
 		Handler: Submit,

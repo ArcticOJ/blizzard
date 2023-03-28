@@ -1,13 +1,21 @@
 package contests
 
 import (
-	"backend/blizzard/models"
-	"backend/blizzard/pb"
+	"blizzard/blizzard/judge"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
+	"blizzard/blizzard/pb"
+	"fmt"
+	"github.com/google/uuid"
 	"io"
+	"math/rand"
 	"mime/multipart"
+	"strconv"
+	"strings"
+	"time"
 )
 
-func CreateFile(file *multipart.FileHeader) *pb.File {
+func CreateFile(id string, file *multipart.FileHeader) *pb.File {
 	f, e := file.Open()
 	if e != nil {
 		return nil
@@ -17,60 +25,40 @@ func CreateFile(file *multipart.FileHeader) *pb.File {
 		return nil
 	}
 	return &pb.File{
+		Id:     id,
 		Buffer: buf,
 	}
 }
 
-func Submit(ctx *models.Context) models.Response {
+func Submit(ctx *extra.Context) models.Response {
 	// TODO: finalize response piping from judge to client
-	//shouldStream := ctx.FormValue("streamed") == "true"
+	shouldStream := ctx.FormValue("streamed") == "true"
 	code, e := ctx.FormFile("code")
+	problem := ctx.Param("id")
 	if e != nil {
 		return ctx.Bad("Invalid submission.")
 	}
-	file := CreateFile(code)
-	if ok, client := ctx.TrySelectClient(ctx.Request().Context()); ok {
+	id := fmt.Sprintf("%s_%s_%d_%s", strings.ReplaceAll(ctx.Get("user").(uuid.UUID).String(), "-", ""), problem, time.Now().Unix(), strconv.FormatUint(rand.Uint64(), 16))
+	file := CreateFile(id, code)
+	if ok, client := judge.TrySelectClient(ctx.Request().Context()); ok {
 		conn, e := client.Judge(ctx.Request().Context(), file)
 		if e != nil {
 			return ctx.InternalServerError("Could not establish connection to judging server.")
 		}
-		for _, err := conn.Recv(); true; {
+		var stream *models.ResponseStream
+		if shouldStream {
+			stream = ctx.StreamResponse()
+		}
+		for true {
+			res, err := conn.Recv()
 			if err != nil {
 				_ = conn.Close()
 				break
 			}
-		} /*
 			if shouldStream {
-				stream := ctx.StreamResponse()
-				print(ctx.Param("id"))
-				for i := 0; i < 10; i++ {
-					r := submissions.TestResult{
-						Memory:   10,
-						Duration: 25,
-						Verdict:  submissions.Accepted,
-						Point:    10,
-					}
-					if i%3 == 0 {
-						r = submissions.TestResult{
-							Memory:   10,
-							Duration: 25,
-							Verdict:  submissions.WrongAnswer,
-							Point:    0,
-						}
-					} else if i%2 == 0 {
-						r = submissions.TestResult{
-							Memory:   10,
-							Duration: 25,
-							Verdict:  submissions.WrongAnswer,
-							Point:    0,
-						}
-					}
-					if stream.Write(r) != nil {
-						return nil
-					}
-					time.Sleep(time.Second * 1)
-				}
-			}*/
+				_ = stream.Write(res)
+			}
+		}
 	} else {
 		return ctx.InternalServerError("Could not find a suitable judge server.")
 	}

@@ -1,10 +1,11 @@
 package auth
 
 import (
-	"backend/blizzard/models"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
 )
 
-var Map = models.RouteMap{
+var Map = extra.RouteMap{
 	"/login": {
 		Methods: []models.Method{models.Post},
 		Handler: Login,

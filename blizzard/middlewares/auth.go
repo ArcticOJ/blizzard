@@ -1,21 +1,23 @@
 package middlewares
 
 import (
-	"backend/blizzard/db/models/shared"
-	"backend/blizzard/models"
+	"blizzard/blizzard/db"
+	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"strings"
 )
 
-func invalidate(ctx models.Context) error {
+func invalidate(ctx *extra.Context) error {
 	ctx.Set("user", nil)
 	ctx.DeleteCookie("session")
 	return ctx.JSONPretty(401, ctx.Unauthorized().Body(), "\t")
 }
 
-func Authentication(secret string, server *models.Server) echo.MiddlewareFunc {
+func Authentication(secret string) echo.MiddlewareFunc {
 	key := []byte(secret)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -26,14 +28,13 @@ func Authentication(secret string, server *models.Server) echo.MiddlewareFunc {
 				authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 				if len(authToken) > 0 {
 					var user shared.User
-					if e := server.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
+					if e := db.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
 						c.Set("user", user.ID)
 						return next(c)
 					}
 				}
 			}
-			ctx := models.Context{
-				Server:  server,
+			ctx := &extra.Context{
 				Context: c,
 			}
 			jt, e := ctx.Cookie("session")

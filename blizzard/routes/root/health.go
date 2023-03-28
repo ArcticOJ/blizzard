@@ -1,9 +1,12 @@
 package root
 
 import (
-	"backend/blizzard/build"
-	"backend/blizzard/models"
-	"backend/blizzard/pb"
+	"blizzard/blizzard/build"
+	"blizzard/blizzard/judge"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
+	"blizzard/blizzard/pb"
+	"blizzard/blizzard/server/utils"
 	"github.com/labstack/echo/v4"
 	"time"
 )
@@ -16,11 +19,11 @@ type JudgeInfo struct {
 	*pb.InstanceSpecification
 }
 
-func Health(ctx *models.Context) models.Response {
+func Health(ctx *extra.Context) models.Response {
 	ctx.Response().Header().Add("Timing-Allow-Origin", "*")
 	var judgesInfo []JudgeInfo
-	for name := range ctx.Igloo {
-		client, ok := models.Renew(ctx.Request().Context(), ctx.Igloo, name)
+	for name := range judge.Igloo {
+		client, ok := judge.Renew(ctx.Request().Context(), judge.Igloo, name)
 		if !ok {
 			judgesInfo = append(judgesInfo, JudgeInfo{
 				Name:    name,
@@ -47,7 +50,7 @@ func Health(ctx *models.Context) models.Response {
 	}
 	return ctx.Respond(echo.Map{
 		"version": build.Version,
-		"uptime":  ctx.Uptime(),
+		"uptime":  utils.Uptime(),
 		"judges":  judgesInfo,
 	})
 }

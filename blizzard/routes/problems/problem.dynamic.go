@@ -1,12 +1,13 @@
 package problems
 
 import (
-	"backend/blizzard/db/models/problems"
-	"backend/blizzard/db/models/shared"
-	"backend/blizzard/models"
+	"blizzard/blizzard/db/models/problems"
+	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/models"
+	"blizzard/blizzard/models/extra"
 )
 
-func Problem(ctx *models.Context) models.Response {
+func Problem(ctx *extra.Context) models.Response {
 	return ctx.Respond(problems.Problem{
 		Id:      "hello-world",
 		Title:   "Hello World",

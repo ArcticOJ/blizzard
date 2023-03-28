@@ -1,7 +1,7 @@
 package feeds
 
 import (
-	"backend/blizzard/db/models/shared"
+	"blizzard/blizzard/db/models/shared"
 	"github.com/uptrace/bun"
 )
 
