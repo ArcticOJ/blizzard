@@ -1,19 +1,29 @@
 package seed
 
 import (
-	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/db/models/users"
 	"context"
 	"github.com/uptrace/bun"
 )
 
+var models = []any{
+	(*users.User)(nil),
+	(*users.OAuthConnection)(nil),
+}
+
 func registerModels(db *bun.DB) {
-	db.RegisterModel((*shared.User)(nil))
+	for _, model := range models {
+		db.RegisterModel(model)
+	}
 }
 
 func Populate(db *bun.DB) {
+	// TODO: cascade some models
 	registerModels(db)
 	ctx := context.Background()
-	if _, e := db.NewCreateTable().Model((*shared.User)(nil)).IfNotExists().Exec(ctx); e != nil {
-		panic(e)
+	for _, model := range models {
+		if _, e := db.NewCreateTable().Model(model).IfNotExists().Exec(ctx); e != nil {
+			panic(e)
+		}
 	}
 }

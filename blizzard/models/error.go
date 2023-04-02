@@ -1,9 +1,9 @@
 package models
 
 type Error struct {
-	Code    int          `json:"code"`
-	Message string       `json:"message"`
-	Context *interface{} `json:"context,omitempty"`
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Context interface{} `json:"context,omitempty"`
 }
 
 func (e Error) StatusCode() int {

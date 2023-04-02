@@ -2,7 +2,9 @@ package utils
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
+	"strconv"
 )
 
 func Rand(l uint8, fallback string) string {
@@ -11,4 +13,38 @@ func Rand(l uint8, fallback string) string {
 		return fallback
 	}
 	return hex.EncodeToString(bytes)
+}
+
+func ArrayIncludes[T comparable](arr []T, item T) bool {
+	for _, k := range arr {
+		if k == item {
+			return true
+		}
+	}
+	return false
+}
+
+func DecodeBase64ToString(b64 string) string {
+	b, e := base64.RawStdEncoding.DecodeString(b64)
+	if e != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func DecodeBase64ToBytes(b64 string) []byte {
+	buf := make([]byte, base64.RawStdEncoding.DecodedLen(len(b64)))
+	d, err := base64.RawStdEncoding.Decode(buf, []byte(b64))
+	if err != nil {
+		return nil
+	}
+	return buf[:d]
+}
+
+func ParseInt(s string) int {
+	v, e := strconv.Atoi(s)
+	if e != nil {
+		return 0
+	}
+	return v
 }

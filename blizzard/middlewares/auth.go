@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/db/models/users"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
 	"fmt"
@@ -11,25 +11,22 @@ import (
 	"strings"
 )
 
-func invalidate(ctx *extra.Context) error {
+func invalidate(ctx *extra.Context, next echo.HandlerFunc) error {
 	ctx.Set("user", nil)
 	ctx.DeleteCookie("session")
-	return ctx.JSONPretty(401, ctx.Unauthorized().Body(), "\t")
+	return next(ctx)
 }
 
 func Authentication(secret string) echo.MiddlewareFunc {
 	key := []byte(secret)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			if strings.HasPrefix(c.Path(), "/auth/") {
-				return next(c)
-			}
 			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
 				authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 				if len(authToken) > 0 {
-					var user shared.User
-					if e := db.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
-						c.Set("user", user.ID)
+					var user users.User
+					if e := db.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("uuid").Scan(c.Request().Context()); e == nil {
+						c.Set("user", user.UUID)
 						return next(c)
 					}
 				}
@@ -39,7 +36,7 @@ func Authentication(secret string) echo.MiddlewareFunc {
 			}
 			jt, e := ctx.Cookie("session")
 			if e != nil {
-				return invalidate(ctx)
+				return invalidate(ctx, next)
 			}
 			token, err := jwt.ParseWithClaims(jt.Value, &models.Session{}, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -48,12 +45,12 @@ func Authentication(secret string) echo.MiddlewareFunc {
 				return key, nil
 			})
 			if err != nil {
-				return invalidate(ctx)
+				return invalidate(ctx, next)
 			}
 			if session, ok := token.Claims.(*models.Session); ok && token.Valid {
 				ctx.Set("user", session.UUID)
 			} else {
-				return invalidate(ctx)
+				return invalidate(ctx, next)
 			}
 			return next(c)
 		}

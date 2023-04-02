@@ -1,9 +1,11 @@
 package extra
 
 import (
+	"blizzard/blizzard/config"
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/shared"
+	"blizzard/blizzard/db/models/users"
 	"blizzard/blizzard/models"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -14,8 +16,14 @@ type Context struct {
 	echo.Context
 }
 
-func (ctx Context) Err(code int, message string, context *interface{}) models.Response {
-	return &models.Error{Code: code, Message: message, Context: context}
+func (ctx Context) Err(code int, message string, context ...interface{}) models.Response {
+	var c interface{} = context
+	if len(context) == 0 {
+		c = nil
+	} else if len(context) == 1 {
+		c = context[0]
+	}
+	return &models.Error{Code: code, Message: message, Context: c}
 }
 
 func (ctx Context) Respond(data interface{}) models.Response {
@@ -40,24 +48,24 @@ func (ctx Context) StreamResponse() *models.ResponseStream {
 	return models.New(r)
 }
 
-func (ctx Context) Bad(message string) models.Response {
-	return ctx.Err(400, message, nil)
+func (ctx Context) Bad(message string, context ...interface{}) models.Response {
+	return ctx.Err(400, message, context...)
 }
 
-func (ctx Context) Unauthorized() models.Response {
-	return ctx.Err(401, "Unauthorized.", nil)
+func (ctx Context) Unauthorized(context ...interface{}) models.Response {
+	return ctx.Err(401, "Unauthorized.", context...)
 }
 
-func (ctx Context) Forbid(message string) models.Response {
-	return ctx.Err(403, message, nil)
+func (ctx Context) Forbid(message string, context ...interface{}) models.Response {
+	return ctx.Err(403, message, context...)
 }
 
-func (ctx Context) NotFound(message string) models.Response {
-	return ctx.Err(404, message, nil)
+func (ctx Context) NotFound(message string, context ...interface{}) models.Response {
+	return ctx.Err(404, message, context...)
 }
 
-func (ctx Context) InternalServerError(message string) models.Response {
-	return ctx.Err(500, message, nil)
+func (ctx Context) InternalServerError(message string, context ...interface{}) models.Response {
+	return ctx.Err(500, message, context...)
 }
 
 func (ctx Context) Success() models.Response {
@@ -78,13 +86,13 @@ func (ctx Context) GetUUID() *uuid.UUID {
 	}
 }
 
-func (ctx Context) GetUser(columns ...string) *shared.User {
+func (ctx Context) GetUser(columns ...string) *users.User {
 	id := ctx.GetUUID()
 	if id == nil {
 		return nil
 	}
-	var user shared.User
-	query := db.Database.NewSelect().Model(&user).Where("id = ?", id)
+	var user users.User
+	query := db.Database.NewSelect().Model(&user).Where("uuid = ?", id)
 	if len(columns) == 0 {
 		query = query.ExcludeColumn("password", "api_key")
 	} else {
@@ -120,4 +128,38 @@ func (ctx Context) DeleteCookie(name string) {
 	cookie.SameSite = http.SameSiteLaxMode
 	cookie.Path = "/"
 	ctx.SetCookie(cookie)
+}
+
+func (ctx Context) CommitResponse(res models.Response) error {
+	return ctx.JSONPretty(res.StatusCode(), res.Body(), "\t")
+}
+
+func (ctx Context) Authenticate(uuid uuid.UUID, remember bool) models.Response {
+	key := []byte(config.Config.PrivateKey)
+	now := time.Now()
+	lifespan := now.AddDate(0, 1, 0)
+	ss := &models.Session{
+		UUID: uuid,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(lifespan),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    "Project Arctic",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ss)
+	signedToken, e := token.SignedString(key)
+	if e != nil {
+		return ctx.InternalServerError("Could not create a new session.")
+	}
+	ctx.PutCookie("session", signedToken, lifespan, !remember)
+	return ctx.Success()
+}
+
+func (ctx Context) RequireAuth() bool {
+	authenticated := ctx.GetUUID() != nil
+	if !authenticated {
+		ctx.CommitResponse(ctx.Unauthorized())
+	}
+	return !authenticated
 }

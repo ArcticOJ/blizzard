@@ -14,8 +14,8 @@ var Map = extra.RouteMap{
 		Methods: []models.Method{models.Get},
 		Handler: CreateUrl,
 	},
-	"/:provider/callback": {
-		Methods: []models.Method{models.Get},
-		Handler: Callback,
+	"/:provider/validate": {
+		Methods: []models.Method{models.Post},
+		Handler: Validate,
 	},
 }

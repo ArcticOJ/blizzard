@@ -8,6 +8,7 @@ import (
 	"blizzard/blizzard/oauth"
 	"blizzard/blizzard/server"
 	"blizzard/blizzard/server/utils"
+	"blizzard/blizzard/utils/crypto"
 )
 
 func init() {
@@ -19,6 +20,7 @@ func init() {
 }
 
 func init() {
+	crypto.Init()
 	db.Init()
 	judge.Init()
 	oauth.Init()

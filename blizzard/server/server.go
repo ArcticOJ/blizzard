@@ -31,16 +31,17 @@ var Map = map[string]extra.RouteMap{
 
 func createHandler(handler extra.Handler) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		res := handler(&extra.Context{
+		ctx := &extra.Context{
 			Context: c,
-		})
-		if c.Response().Committed {
+		}
+		res := handler(ctx)
+		if ctx.Response().Committed {
 			return nil
 		}
 		if res == nil {
-			return c.NoContent(http.StatusNoContent)
+			return ctx.NoContent(http.StatusNoContent)
 		} else {
-			return c.JSONPretty(res.StatusCode(), res.Body(), "\t")
+			return ctx.CommitResponse(res)
 		}
 	}
 }
@@ -67,9 +68,9 @@ func CreateServer() *echo.Echo {
 			LogStatus: true,
 			LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 				logger.Logger.Debug().
-					Str("URI", v.URI).
+					Str("url", v.URI).
 					Int("status", v.Status).
-					Msg("request")
+					Msg("req")
 				return nil
 			},
 		}))

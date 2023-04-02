@@ -2,31 +2,29 @@ package oauth
 
 import (
 	"blizzard/blizzard/config"
+	"blizzard/blizzard/oauth/providers"
 	"fmt"
-	"github.com/ravener/discord-oauth2"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
+	"sort"
 )
 
 var EnabledProviders []string
 
-type pConf struct {
-	scopes   []string
-	endpoint oauth2.Endpoint
-}
+// TODO: move to models
 
-var providerConf = map[string]pConf{
-	"github": {
-		scopes:   []string{"user:email"},
-		endpoint: github.Endpoint,
-	},
-	"discord": {
-		scopes:   []string{discord.ScopeIdentify, discord.ScopeEmail},
-		endpoint: discord.Endpoint,
-	},
+var providerConf = map[string]providers.ProviderConfig{
+	"github":  providers.GitHubProviderConfig,
+	"discord": providers.DiscordProviderConfig,
 }
 
 var Conf = make(map[string]*oauth2.Config)
+
+var UserInfoHandler = map[string]providers.UserInfoHandler{
+	"github":  providers.GetGitHubUser,
+	"discord": providers.GetDiscordUser,
+}
+
+var AllowedActions = []string{"link", "register", "login"}
 
 func Init() {
 	for name, provider := range config.Config.OAuth {
@@ -34,12 +32,15 @@ func Init() {
 			EnabledProviders = append(EnabledProviders, name)
 			Conf[name] = &oauth2.Config{
 				// TODO: change this to config-based url
-				RedirectURL:  fmt.Sprintf("https://localhost/api/oauth/%s/callback", name),
-				Scopes:       c.scopes,
-				Endpoint:     c.endpoint,
+				RedirectURL:  fmt.Sprintf("https://localhost/oauth/%s/callback", name),
+				Scopes:       c.Scopes,
+				Endpoint:     c.Endpoint,
 				ClientID:     provider.ClientId,
 				ClientSecret: provider.ClientSecret,
 			}
 		}
 	}
+	sort.Slice(EnabledProviders, func(i, j int) bool {
+		return EnabledProviders[i] < EnabledProviders[j]
+	})
 }

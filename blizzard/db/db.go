@@ -21,7 +21,7 @@ func createDb() *bun.DB {
 		pgdriver.WithInsecure(!conf.Secure)))
 	db := bun.NewDB(psql, pgdialect.New())
 	if config.Config.Debug {
-		// TODO: hook logger after queries
+		db.AddQueryHook(&QueryHook{})
 	}
 	return db
 }
