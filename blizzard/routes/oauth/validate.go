@@ -130,6 +130,7 @@ func Validate(ctx *extra.Context) models.Response {
 			if r := HandleLogin(ctx, name, res, state); r != nil {
 				return r
 			}
+			break
 		}
 		return ctx.Respond(echo.Map{
 			"action": action,

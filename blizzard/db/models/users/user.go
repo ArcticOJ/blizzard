@@ -18,5 +18,6 @@ type User struct {
 	ApiKey       string            `json:"-"`
 	Avatar       string            `bun:"-" json:"avatar"`
 	Connections  []OAuthConnection `bun:",rel:has-many,join:uuid=user_id"`
+	//DeletedAt    time.Time         `bun:",soft_delete,nullzero"`
 	//LastLogin     time.Time `bun:"lastLogin,nullzero,type:timestamptz" json:"lastLogin"`
 }
