@@ -6,26 +6,26 @@ import (
 )
 
 type ResponseStream struct {
-	Encoder *json.Encoder
-	Stream  *echo.Response
+	encoder *json.Encoder
+	stream  *echo.Response
 }
 
 func New(response *echo.Response) *ResponseStream {
 	return &ResponseStream{
-		Encoder: json.NewEncoder(response),
-		Stream:  response,
+		encoder: json.NewEncoder(response),
+		stream:  response,
 	}
 }
 
-func (stream *ResponseStream) Write(obj interface{}) error {
-	e := stream.Encoder.Encode(obj)
+func (rs *ResponseStream) Write(obj interface{}) error {
+	e := rs.encoder.Encode(obj)
 	if e != nil {
 		return e
 	}
-	stream.Flush()
+	rs.Flush()
 	return nil
 }
 
-func (stream *ResponseStream) Flush() {
-	stream.Stream.Flush()
+func (rs *ResponseStream) Flush() {
+	rs.stream.Flush()
 }

@@ -2,7 +2,7 @@
 // protoc-gen-go-drpc version: v0.0.32
 // source: igloo.proto
 
-package pb
+package igloo
 
 import (
 	context "context"
@@ -42,7 +42,7 @@ type DRPCIglooClient interface {
 
 	Alive(ctx context.Context, in *emptypb.Empty) (*wrapperspb.BoolValue, error)
 	Specification(ctx context.Context, in *emptypb.Empty) (*InstanceSpecification, error)
-	Judge(ctx context.Context, in *File) (DRPCIgloo_JudgeClient, error)
+	Judge(ctx context.Context, in *Submission) (DRPCIgloo_JudgeClient, error)
 }
 
 type drpcIglooClient struct {
@@ -57,7 +57,7 @@ func (c *drpcIglooClient) DRPCConn() drpc.Conn { return c.cc }
 
 func (c *drpcIglooClient) Alive(ctx context.Context, in *emptypb.Empty) (*wrapperspb.BoolValue, error) {
 	out := new(wrapperspb.BoolValue)
-	err := c.cc.Invoke(ctx, "/arctic.Igloo/Alive", drpcEncoding_File_igloo_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/igloo.Igloo/Alive", drpcEncoding_File_igloo_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -66,15 +66,15 @@ func (c *drpcIglooClient) Alive(ctx context.Context, in *emptypb.Empty) (*wrappe
 
 func (c *drpcIglooClient) Specification(ctx context.Context, in *emptypb.Empty) (*InstanceSpecification, error) {
 	out := new(InstanceSpecification)
-	err := c.cc.Invoke(ctx, "/arctic.Igloo/Specification", drpcEncoding_File_igloo_proto{}, in, out)
+	err := c.cc.Invoke(ctx, "/igloo.Igloo/Specification", drpcEncoding_File_igloo_proto{}, in, out)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *drpcIglooClient) Judge(ctx context.Context, in *File) (DRPCIgloo_JudgeClient, error) {
-	stream, err := c.cc.NewStream(ctx, "/arctic.Igloo/Judge", drpcEncoding_File_igloo_proto{})
+func (c *drpcIglooClient) Judge(ctx context.Context, in *Submission) (DRPCIgloo_JudgeClient, error) {
+	stream, err := c.cc.NewStream(ctx, "/igloo.Igloo/Judge", drpcEncoding_File_igloo_proto{})
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (x *drpcIgloo_JudgeClient) RecvMsg(m *JudgeResult) error {
 type DRPCIglooServer interface {
 	Alive(context.Context, *emptypb.Empty) (*wrapperspb.BoolValue, error)
 	Specification(context.Context, *emptypb.Empty) (*InstanceSpecification, error)
-	Judge(*File, DRPCIgloo_JudgeStream) error
+	Judge(*Submission, DRPCIgloo_JudgeStream) error
 }
 
 type DRPCIglooUnimplementedServer struct{}
@@ -125,7 +125,7 @@ func (s *DRPCIglooUnimplementedServer) Specification(context.Context, *emptypb.E
 	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
-func (s *DRPCIglooUnimplementedServer) Judge(*File, DRPCIgloo_JudgeStream) error {
+func (s *DRPCIglooUnimplementedServer) Judge(*Submission, DRPCIgloo_JudgeStream) error {
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
@@ -136,7 +136,7 @@ func (DRPCIglooDescription) NumMethods() int { return 3 }
 func (DRPCIglooDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
 	case 0:
-		return "/arctic.Igloo/Alive", drpcEncoding_File_igloo_proto{},
+		return "/igloo.Igloo/Alive", drpcEncoding_File_igloo_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCIglooServer).
 					Alive(
@@ -145,7 +145,7 @@ func (DRPCIglooDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 					)
 			}, DRPCIglooServer.Alive, true
 	case 1:
-		return "/arctic.Igloo/Specification", drpcEncoding_File_igloo_proto{},
+		return "/igloo.Igloo/Specification", drpcEncoding_File_igloo_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return srv.(DRPCIglooServer).
 					Specification(
@@ -154,11 +154,11 @@ func (DRPCIglooDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 					)
 			}, DRPCIglooServer.Specification, true
 	case 2:
-		return "/arctic.Igloo/Judge", drpcEncoding_File_igloo_proto{},
+		return "/igloo.Igloo/Judge", drpcEncoding_File_igloo_proto{},
 			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
 				return nil, srv.(DRPCIglooServer).
 					Judge(
-						in1.(*File),
+						in1.(*Submission),
 						&drpcIgloo_JudgeStream{in2.(drpc.Stream)},
 					)
 			}, DRPCIglooServer.Judge, true

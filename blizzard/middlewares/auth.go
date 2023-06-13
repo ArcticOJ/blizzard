@@ -13,7 +13,10 @@ import (
 
 func invalidate(ctx *extra.Context, next echo.HandlerFunc) error {
 	ctx.Set("user", nil)
-	ctx.DeleteCookie("session")
+	p := ctx.Request().URL.Path
+	if !(strings.HasPrefix(p, "/auth/") || strings.HasPrefix(p, "/oauth/")) {
+		ctx.DeleteCookie("session")
+	}
 	return next(ctx)
 }
 

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"os"
 	"strconv"
 )
 
@@ -47,4 +48,12 @@ func ParseInt(s string) int {
 		return 0
 	}
 	return v
+}
+
+func ReadFile(path string) []byte {
+	if b, e := os.ReadFile(path); e != nil {
+		return nil
+	} else {
+		return b
+	}
 }

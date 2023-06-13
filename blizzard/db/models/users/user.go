@@ -17,7 +17,7 @@ type User struct {
 	RegisteredAt time.Time         `bun:",nullzero,type:timestamptz,notnull,default:'now()'::timestamptz" json:"registeredAt,omitempty"`
 	ApiKey       string            `json:"-"`
 	Avatar       string            `bun:"-" json:"avatar"`
-	Connections  []OAuthConnection `bun:",rel:has-many,join:uuid=user_id"`
+	Connections  []OAuthConnection `bun:",rel:has-many,join:uuid=user_id" json:"-"`
 	//DeletedAt    time.Time         `bun:",soft_delete,nullzero"`
 	//LastLogin     time.Time `bun:"lastLogin,nullzero,type:timestamptz" json:"lastLogin"`
 }

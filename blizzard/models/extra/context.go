@@ -115,7 +115,7 @@ func (ctx Context) PutCookie(name string, value string, exp time.Time, sessionOn
 	cookie.SameSite = http.SameSiteLaxMode
 	cookie.Path = "/"
 	// TODO: add secure property to config
-	cookie.Secure = true
+	//cookie.Secure = true
 	ctx.SetCookie(cookie)
 }
 
@@ -144,7 +144,7 @@ func (ctx Context) Authenticate(uuid uuid.UUID, remember bool) models.Response {
 			ExpiresAt: jwt.NewNumericDate(lifespan),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
-			Issuer:    "Project Arctic",
+			Issuer:    "Arctic Judge Platform",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ss)

@@ -18,7 +18,6 @@ func registerModels(db *bun.DB) {
 }
 
 func Populate(db *bun.DB) {
-	// TODO: cascade some models
 	registerModels(db)
 	ctx := context.Background()
 	for _, model := range models {

@@ -10,8 +10,6 @@ import (
 
 var EnabledProviders []string
 
-// TODO: move to models
-
 var providerConf = map[string]providers.ProviderConfig{
 	"github":  providers.GitHubProviderConfig,
 	"discord": providers.DiscordProviderConfig,

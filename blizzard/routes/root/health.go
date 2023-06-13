@@ -5,7 +5,7 @@ import (
 	"blizzard/blizzard/judge"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
-	"blizzard/blizzard/pb"
+	"blizzard/blizzard/pb/igloo"
 	"blizzard/blizzard/server/utils"
 	"github.com/labstack/echo/v4"
 	"time"
@@ -16,7 +16,7 @@ type JudgeInfo struct {
 	IsAlive bool    `json:"isAlive"`
 	Latency float64 `json:"latency"`
 	Uptime  int64   `json:"uptime"`
-	*pb.InstanceSpecification
+	*igloo.InstanceSpecification
 }
 
 func Health(ctx *extra.Context) models.Response {

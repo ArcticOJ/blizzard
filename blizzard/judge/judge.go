@@ -2,42 +2,48 @@ package judge
 
 import (
 	"blizzard/blizzard/config"
-	"blizzard/blizzard/pb"
+	models "blizzard/blizzard/models"
+	"blizzard/blizzard/pb/igloo"
 	"context"
 	"go.arsenm.dev/drpc/muxconn"
 	"net"
+	"storj.io/drpc/drpcmetadata"
 	"time"
 )
 
 var Igloo IglooCluster
 
-func makeClients(addrs map[string]string) (cluster IglooCluster) {
+func makeClients(judges map[string]models.Judge) (cluster IglooCluster) {
 	cluster = make(IglooCluster)
-	for name, addr := range addrs {
+	for name, judge := range judges {
 		cluster[name] = IglooClient{
 			DRPCIglooClient: nil,
-			Address:         addr,
+			Address:         judge.Address,
 		}
-		dial, e := net.DialTimeout("tcp", addr, time.Second*3)
+		dial, e := net.DialTimeout("tcp", judge.Address, time.Second*3)
 		if e != nil {
 			continue
 		}
 		conn, _ := muxconn.New(dial)
 		if client, ok := cluster[name]; ok {
-			client.DRPCIglooClient = pb.NewDRPCIglooClient(conn)
+			client.DRPCIglooClient = igloo.NewDRPCIglooClient(conn)
 			cluster[name] = client
 		}
 	}
 	return
 }
 
-func TrySelectClient(ctx context.Context) (ok bool, client *IglooClient) {
+func PickClient(ctx context.Context) (ok bool, client *IglooClient) {
 	for name := range Igloo {
-		if client, ok := Renew(ctx, Igloo, name); ok {
+		if client, ok := Renew(KeyContext(ctx), Igloo, name); ok {
 			return true, client
 		}
 	}
 	return false, nil
+}
+
+func KeyContext(ctx context.Context) context.Context {
+	return drpcmetadata.Add(ctx, "key", "test")
 }
 
 func Init() {

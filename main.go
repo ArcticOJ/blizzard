@@ -6,7 +6,8 @@ import (
 	"blizzard/blizzard/judge"
 	"blizzard/blizzard/logger"
 	"blizzard/blizzard/oauth"
-	"blizzard/blizzard/server"
+	"blizzard/blizzard/server/http"
+	"blizzard/blizzard/server/rpc"
 	"blizzard/blizzard/server/utils"
 	"blizzard/blizzard/utils/crypto"
 )
@@ -27,5 +28,6 @@ func init() {
 }
 
 func main() {
-	utils.Listen(server.CreateServer())
+	go rpc.StartRpc()
+	utils.Listen(http.CreateServer())
 }

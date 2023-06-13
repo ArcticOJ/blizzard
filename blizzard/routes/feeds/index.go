@@ -8,6 +8,7 @@ import (
 )
 
 func Index(ctx *extra.Context) models.Response {
+	time.Sleep(time.Second * 2)
 	return ctx.Arr(feeds.Feed{
 		Id:        "welcome",
 		Title:     "Welcome to Arctic",

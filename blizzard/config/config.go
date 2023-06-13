@@ -2,36 +2,12 @@ package config
 
 import (
 	"blizzard/blizzard/logger"
+	"blizzard/blizzard/models"
 	"blizzard/blizzard/utils"
 	"github.com/spf13/viper"
 )
 
-var Config *blizzardConfig
-
-type blizzardConfig struct {
-	Host       string
-	PrivateKey string
-	Port       uint16
-	Debug      bool
-	EnableCORS bool
-	RateLimit  float64
-	Database   databaseConfig
-	Judges     map[string]string
-	OAuth      map[string]oauthProvider
-}
-
-type oauthProvider struct {
-	ClientId     string
-	ClientSecret string
-}
-
-type databaseConfig struct {
-	Address  string
-	Username string
-	Password string
-	Name     string
-	Secure   bool
-}
+var Config *models.BlizzardConfig
 
 // TODO: finalize defaultConfig
 var defaultConfig = map[string]interface{}{
@@ -42,9 +18,10 @@ var defaultConfig = map[string]interface{}{
 	"debug":      false,
 	"enableCors": true,
 	"rateLimit":  1000,
-	"judges":     map[string]string{},
-	"oauth":      map[string]oauthProvider{},
-	"database": databaseConfig{
+	"judges":     map[string]models.Judge{},
+	"oauth":      map[string]models.OAuthProvider{},
+	"storage":    models.StorageConfig{},
+	"database": models.DatabaseConfig{
 		Address:  "localhost:5432",
 		Name:     "postgres",
 		Username: "postgres",
@@ -53,9 +30,9 @@ var defaultConfig = map[string]interface{}{
 	},
 }
 
-func readConfig() *blizzardConfig {
+func readConfig() *models.BlizzardConfig {
 	// TODO: Command line arguments, env config and config file
-	var conf blizzardConfig
+	var conf models.BlizzardConfig
 	v := viper.New()
 	v.SetConfigName("blizzard")
 	v.SetConfigType("yaml")

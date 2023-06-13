@@ -1,5 +1,3 @@
-# TODO: Add Windoze support
-
 FROM golang:alpine AS builder
 WORKDIR /usr/src/app
 
