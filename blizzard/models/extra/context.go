@@ -3,11 +3,12 @@ package extra
 import (
 	"blizzard/blizzard/config"
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/models"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/uptrace/bun"
 	"net/http"
 	"time"
 )
@@ -86,23 +87,27 @@ func (ctx Context) GetUUID() *uuid.UUID {
 	}
 }
 
-func (ctx Context) GetUser(columns ...string) *users.User {
+func (ctx Context) GetUser() *user.User {
+	return ctx.GetDetailedUser(func(query *bun.SelectQuery) *bun.SelectQuery {
+		return query.Column("id", "handle", "display_name", "email")
+	})
+}
+
+func (ctx Context) GetDetailedUser(q func(query *bun.SelectQuery) *bun.SelectQuery) *user.User {
 	id := ctx.GetUUID()
 	if id == nil {
 		return nil
 	}
-	var user users.User
-	query := db.Database.NewSelect().Model(&user).Where("uuid = ?", id)
-	if len(columns) == 0 {
-		query = query.ExcludeColumn("password", "api_key")
-	} else {
-		query = query.Column(columns...)
+	var usr user.User
+	query := db.Database.NewSelect().Model(&usr).Where("id = ?", id)
+	if q != nil {
+		query = q(query)
 	}
 	e := query.Scan(ctx.Request().Context())
 	if e != nil {
 		return nil
 	}
-	return &user
+	return &usr
 }
 
 func (ctx Context) PutCookie(name string, value string, exp time.Time, sessionOnly bool) {

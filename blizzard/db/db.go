@@ -28,5 +28,5 @@ func createDb() *bun.DB {
 
 func Init() {
 	Database = createDb()
-	seed.Populate(Database)
+	seed.RegisterModels(Database)
 }

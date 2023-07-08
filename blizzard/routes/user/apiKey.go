@@ -2,12 +2,13 @@ package user
 
 import (
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
 	"blizzard/blizzard/utils"
 	"encoding/base64"
 	"github.com/labstack/echo/v4"
+	"github.com/uptrace/bun"
 	"strconv"
 	"time"
 )
@@ -19,7 +20,9 @@ func ApiKey(ctx *extra.Context) models.Response {
 	switch ctx.Method() {
 	case models.Get:
 		return ctx.Respond(echo.Map{
-			"apiKey": ctx.GetUser("api_key").ApiKey,
+			"apiKey": ctx.GetDetailedUser(func(query *bun.SelectQuery) *bun.SelectQuery {
+				return query.Column("api_key")
+			}).ApiKey,
 		})
 	case models.Patch:
 		uuid := ctx.GetUUID()
@@ -29,9 +32,9 @@ func ApiKey(ctx *extra.Context) models.Response {
 			return ctx.InternalServerError("Could not generate an API key.")
 		}
 		apiKey := "arctic." + hash + now
-		if _, e := db.Database.NewUpdate().Model(&users.User{
+		if _, e := db.Database.NewUpdate().Model(&user.User{
 			ApiKey: apiKey,
-		}).Column("api_key").Where("uuid = ?", uuid).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
+		}).Column("api_key").Where("id = ?", uuid).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
 			return ctx.InternalServerError("Could not update your API key.")
 		}
 		return ctx.Respond(echo.Map{

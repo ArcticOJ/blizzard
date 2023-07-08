@@ -6,6 +6,11 @@ import (
 )
 
 var Map = extra.RouteMap{
+	// avoid conflict with other routes
+	"/info/:handle": {
+		Methods: []models.Method{models.Get},
+		Handler: Info,
+	},
 	"/": {
 		Methods: []models.Method{models.Get, models.Post},
 		Handler: Index,

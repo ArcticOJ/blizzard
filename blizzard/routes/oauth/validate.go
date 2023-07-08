@@ -2,7 +2,7 @@ package oauth
 
 import (
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/logger/debug"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
@@ -11,7 +11,10 @@ import (
 	"blizzard/blizzard/utils"
 	"blizzard/blizzard/utils/crypto"
 	"crypto/hmac"
+	"fmt"
+	"github.com/jackc/pgerrcode"
 	"github.com/labstack/echo/v4"
+	"github.com/uptrace/bun/driver/pgdriver"
 	"strings"
 )
 
@@ -22,58 +25,33 @@ type oauthValidationRequest struct {
 
 func HandleLink(ctx *extra.Context, provider string, res *providers.UserInfo) models.Response {
 	uuid := ctx.GetUUID()
-	var conn []users.OAuthConnection
-	if e := db.Database.
-		NewSelect().
-		Model((*users.OAuthConnection)(nil)).
-		Where("id = ?", res.Id).
-		WhereOr("user_id = ? AND provider = ?", uuid, provider).
-		Scan(ctx.Request().Context(), &conn); e != nil {
-		debug.Dump(e)
-		return ctx.InternalServerError(e.Error())
-	} else {
-		if len(conn) == 0 {
-			if _, e := db.Database.NewInsert().Model(&users.OAuthConnection{
-				UserID:   *uuid,
-				Username: res.Username,
-				ID:       res.Id,
-				Provider: provider,
-			}).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
-				debug.Dump(e)
-				return ctx.InternalServerError("Could not bind this UUID to current account.")
-			}
-		} else if len(conn) == 1 {
-			if conn[0].UserID != *uuid {
-				return ctx.Forbid("This UUID is already bound to another account.")
-			}
-			if conn[0].Username != res.Username {
-				if _, e := db.Database.NewUpdate().Model(&users.OAuthConnection{
-					Username: res.Username,
-				}).Column("username").Where("id = ? AND user_id = ?", res.Id, uuid).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
-					debug.Dump(e)
-					return ctx.InternalServerError("Could not update account info.")
-				}
-			}
-		} else {
-			// TODO: handle 1+ connections with the same id? lol
-			return ctx.Forbid("Unexpected error.")
+	if _, e := db.Database.NewInsert().Model(&user.OAuthConnection{
+		UserID:   *uuid,
+		Username: res.Username,
+		ID:       res.Id,
+		Provider: provider,
+	}).Exec(ctx.Request().Context()); e != nil {
+		if err, ok := e.(pgdriver.Error); ok && err.Field('C') == pgerrcode.UniqueViolation {
+			return ctx.Forbid("This ID is already bound to another account.")
 		}
+		fmt.Println(e)
+		debug.Dump(e)
 	}
 	return nil
 }
 
 func HandleLogin(ctx *extra.Context, provider string, res *providers.UserInfo, state []string) models.Response {
-	var c []users.OAuthConnection
+	var c []user.OAuthConnection
 	if e := db.Database.NewSelect().
-		Model((*users.OAuthConnection)(nil)).
+		Model(&c).
 		Where("provider = ? AND id = ?", provider, res.Id).
 		Limit(1).
-		Scan(ctx.Request().Context(), &c); e != nil {
+		Scan(ctx.Request().Context()); e != nil {
 		debug.Dump(e)
-		return ctx.NotFound("This UUID is not linked with any accounts.")
+		return ctx.NotFound("This ID is not linked to any accounts.")
 	} else {
 		if len(c) != 1 {
-			return ctx.NotFound("This UUID is not linked with any accounts.")
+			return ctx.NotFound("This ID is not linked to any accounts.")
 		}
 		ctx.Authenticate(c[0].UserID, len(state) == 3 && state[2] == "1")
 	}
@@ -81,7 +59,6 @@ func HandleLogin(ctx *extra.Context, provider string, res *providers.UserInfo, s
 }
 
 func Validate(ctx *extra.Context) models.Response {
-	// TODO: handle oauth callback
 	name := ctx.Param("provider")
 	if prov, ok := oauth.Conf[name]; ok {
 		var body oauthValidationRequest
@@ -127,6 +104,7 @@ func Validate(ctx *extra.Context) models.Response {
 			}
 			break
 		case "login":
+			// TODO: login callback url
 			if r := HandleLogin(ctx, name, res, state); r != nil {
 				return r
 			}

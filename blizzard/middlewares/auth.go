@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
 	"fmt"
@@ -27,9 +27,9 @@ func Authentication(secret string) echo.MiddlewareFunc {
 			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
 				authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 				if len(authToken) > 0 {
-					var user users.User
-					if e := db.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("uuid").Scan(c.Request().Context()); e == nil {
-						c.Set("user", user.UUID)
+					var user user.User
+					if e := db.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
+						c.Set("user", user.ID)
 						return next(c)
 					}
 				}

@@ -2,7 +2,7 @@ package oauth
 
 import (
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/logger/debug"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
@@ -21,9 +21,9 @@ func Index(ctx *extra.Context) models.Response {
 		"providers": oauth.EnabledProviders,
 	}
 	if uuid != nil {
-		var c []users.OAuthConnection
+		var c []user.OAuthConnection
 		m := make(map[string]connection)
-		debug.Dump(db.Database.NewSelect().Model((*users.OAuthConnection)(nil)).ExcludeColumn("user_id").Where("user_id = ?", uuid).Scan(ctx.Request().Context(), &c))
+		debug.Dump(db.Database.NewSelect().Model(&c).ExcludeColumn("user_id").Where("user_id = ?", uuid).Scan(ctx.Request().Context()))
 		debug.Dump(c)
 		for _, p := range c {
 			m[p.Provider] = connection{

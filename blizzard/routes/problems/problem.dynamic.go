@@ -1,16 +1,14 @@
 package problems
 
 import (
-	"blizzard/blizzard/db/models/problems"
+	"blizzard/blizzard/db/models/contest"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
 )
 
 func Problem(ctx *extra.Context) models.Response {
-	return ctx.Respond(problems.Problem{
-		Id:      "hello-world",
-		Title:   "Hello World",
-		Contest: "",
+	return ctx.Respond(contest.Problem{
+		ID:      "hello-world",
 		Tags:    []string{"easy", "beginner"},
 		Content: "",
 	})

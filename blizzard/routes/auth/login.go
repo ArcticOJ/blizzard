@@ -2,10 +2,11 @@ package auth
 
 import (
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
 	"github.com/matthewhartstonge/argon2"
+	"strings"
 )
 
 type loginRequest struct {
@@ -21,13 +22,14 @@ func Login(ctx *extra.Context) models.Response {
 	if ctx.Bind(&req) != nil {
 		return ctx.Bad("Malformed credentials.")
 	}
-	var user users.User
-	if e := db.Database.NewSelect().Model(&user).Where("handle = ?", req.Handle).WhereOr("email = ?", req.Handle).Column("uuid", "password").Scan(ctx.Request().Context()); e != nil {
+	var user user.User
+	handleOrEmail := strings.ToLower(req.Handle)
+	if e := db.Database.NewSelect().Model(&user).Where("handle = ?", handleOrEmail).WhereOr("email = ?", handleOrEmail).Column("id", "password").Scan(ctx.Request().Context()); e != nil {
 		return ctx.NotFound("User not found.")
 	}
 	if r, _ := argon2.VerifyEncoded([]byte(req.Password), []byte(user.Password)); !r {
 		return ctx.Bad("Wrong password.")
 	} else {
-		return ctx.Authenticate(user.UUID, req.RememberMe)
+		return ctx.Authenticate(user.ID, req.RememberMe)
 	}
 }

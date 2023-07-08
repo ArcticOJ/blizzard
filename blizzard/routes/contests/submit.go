@@ -3,7 +3,6 @@
 package contests
 
 import (
-	"blizzard/blizzard/db/models/problems/submissions"
 	"blizzard/blizzard/judge"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
@@ -31,9 +30,9 @@ type (
 		Time uint32 `yaml:"time"`
 	}
 	Result struct {
-		Verdict  submissions.Verdict `json:"verdict"`
-		Memory   uint64              `json:"memory"`
-		Duration float64             `json:"duration"`
+		Verdict  uint8   `json:"verdict"`
+		Memory   uint64  `json:"memory"`
+		Duration float64 `json:"duration"`
 	}
 )
 

@@ -1,28 +1,37 @@
 package seed
 
 import (
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/contest"
+	"blizzard/blizzard/db/models/user"
 	"context"
 	"github.com/uptrace/bun"
 )
 
+var intermediaryModels = []any{
+	(*contest.ContestToOrganizer)(nil),
+	(*contest.ContestToProblem)(nil),
+	(*user.UserToRole)(nil),
+}
+
 var models = []any{
-	(*users.User)(nil),
-	(*users.OAuthConnection)(nil),
+	// users
+	(*user.User)(nil),
+	(*user.OAuthConnection)(nil),
+	(*user.Role)(nil),
+	(*contest.Contest)(nil),
+	(*contest.Problem)(nil),
+	(*contest.Submission)(nil),
+	// intermediary models
 }
 
-func registerModels(db *bun.DB) {
-	for _, model := range models {
-		db.RegisterModel(model)
-	}
+func RegisterModels(db *bun.DB) {
+	db.RegisterModel(intermediaryModels...)
+	db.RegisterModel(models...)
 }
 
-func Populate(db *bun.DB) {
-	registerModels(db)
-	ctx := context.Background()
-	for _, model := range models {
-		if _, e := db.NewCreateTable().Model(model).IfNotExists().Exec(ctx); e != nil {
-			panic(e)
-		}
+func InitTables(db *bun.DB, ctx context.Context) error {
+	if e := db.ResetModel(ctx, models...); e != nil {
+		return e
 	}
+	return db.ResetModel(ctx, intermediaryModels...)
 }

@@ -2,7 +2,7 @@ package oauth
 
 import (
 	"blizzard/blizzard/db"
-	"blizzard/blizzard/db/models/users"
+	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/logger/debug"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
@@ -20,7 +20,7 @@ func Unlink(ctx *extra.Context) models.Response {
 		return ctx.Bad("Invalid ID.")
 	}
 	if utils.ArrayIncludes(oauth.EnabledProviders, prov) {
-		if _, e := db.Database.NewDelete().Model((*users.OAuthConnection)(nil)).Where("id = ? AND provider = ?", id, prov).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
+		if _, e := db.Database.NewDelete().Model((*user.OAuthConnection)(nil)).Where("id = ? AND provider = ?", id, prov).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
 			debug.Dump(e)
 			return ctx.NotFound("OAuth connection not found.")
 		}
