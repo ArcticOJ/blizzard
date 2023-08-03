@@ -19,4 +19,8 @@ var Map = extra.RouteMap{
 		Methods: []models.Method{models.Get, models.Patch},
 		Handler: ApiKey,
 	},
+	"/changeUsername": {
+		Methods: []models.Method{models.Post},
+		Handler: ChangeUsername,
+	},
 }

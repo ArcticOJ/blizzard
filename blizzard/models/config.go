@@ -8,10 +8,10 @@ type (
 		Debug      bool
 		EnableCORS bool
 		RateLimit  float64
-		Database   DatabaseConfig
-		Storage    StorageConfig
-		Judges     map[string]Judge
-		OAuth      map[string]OAuthProvider
+		Database   *DatabaseConfig
+		Storage    *StorageConfig
+		Judges     map[string]*Judge
+		OAuth      map[string]*OAuthProvider
 	}
 
 	OAuthProvider struct {
@@ -21,6 +21,8 @@ type (
 
 	StorageConfig struct {
 		Problems string `yaml:"problems"`
+		Posts    string `yaml:"posts"`
+		READMEs  string `yaml:"readmes"`
 	}
 
 	DatabaseConfig struct {

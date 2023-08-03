@@ -1,19 +1,18 @@
 package problems
 
 import (
+	"blizzard/blizzard/db"
 	"blizzard/blizzard/db/models/contest"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
 )
 
+// TODO: add filters and pagination
+
 func Index(ctx *extra.Context) models.Response {
-	return ctx.Arr(contest.Problem{
-		ID:      "hello-world",
-		Tags:    []string{"easy", "beginner"},
-		Content: "",
-	}, contest.Problem{
-		ID:      "sum",
-		Tags:    []string{"easy", "beginner", "numbers"},
-		Content: "",
-	})
+	var problems []*contest.Problem
+	if db.Database.NewSelect().Model(&problems).Column("id", "tags", "title").Scan(ctx.Request().Context()) != nil {
+		return ctx.InternalServerError("Could not fetch problems.")
+	}
+	return ctx.Respond(problems)
 }

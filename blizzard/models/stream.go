@@ -10,7 +10,7 @@ type ResponseStream struct {
 	stream  *echo.Response
 }
 
-func New(response *echo.Response) *ResponseStream {
+func NewStream(response *echo.Response) *ResponseStream {
 	return &ResponseStream{
 		encoder: json.NewEncoder(response),
 		stream:  response,

@@ -32,38 +32,32 @@ func init() {
 
 func createUser() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "create_user <handle> <password> <email> <role_id>",
+		Use:   "create_user <handle> <password> <email>",
 		Short: "create a new user",
-		Args:  cobra.ExactArgs(4),
+		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			r, e := core.HashConfig.HashEncoded([]byte(args[1]))
 			if e != nil {
 				return e
 			}
-			roleId, e := strconv.ParseUint(args[3], 10, 16)
 			if e != nil {
 				return fmt.Errorf("invalid role_id, role_id must be a valid 16-bit integer")
-			}
-			if e != nil {
-				return e
-			}
-			var roles []user.Role
-			e = db.Database.NewSelect().Model(&roles).Where("id = ?", roleId).Column("id").Scan(cmd.Context())
-			if e != nil {
-				return e
-			}
-			if len(roles) != 1 {
-				return fmt.Errorf("no roles found with that id")
 			}
 			u := &user.User{
 				Handle:   strings.ToLower(args[0]),
 				Email:    strings.ToLower(args[2]),
 				Password: string(r),
 			}
+
+			var roleId int = -1
+
+			if role, e := cmd.Flags().GetInt("role"); e == nil && role != -1 {
+				roleId = role
+			}
 			if name, e := cmd.Flags().GetString("name"); e == nil && name != "" {
 				u.DisplayName = name
 			}
-			if org, e := cmd.Flags().GetString("organization"); e == nil && org != "" {
+			if org, e := cmd.Flags().GetString("org"); e == nil && org != "" {
 				u.Organization = org
 			}
 			if e := db.Database.RunInTx(cmd.Context(), nil, func(ctx context.Context, tx bun.Tx) error {
@@ -71,12 +65,14 @@ func createUser() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				_, err = tx.NewInsert().Model(&user.UserToRole{
-					RoleID: roles[0].ID,
-					UserID: u.ID,
-				}).Exec(ctx)
-				if err != nil {
-					return err
+				if roleId >= 0 {
+					_, err = tx.NewInsert().Model(&user.UserToRole{
+						RoleID: uint16(roleId),
+						UserID: u.ID,
+					}).Exec(ctx)
+					if err != nil {
+						return err
+					}
 				}
 				return nil
 			}); e != nil {
@@ -87,6 +83,7 @@ func createUser() *cobra.Command {
 	}
 	c.Flags().String("name", "", "display name for created user")
 	c.Flags().String("org", "", "affiliated organization of user")
+	c.Flags().Int("role", -1, "role to assign")
 	return c
 }
 
@@ -109,8 +106,8 @@ func createRole() *cobra.Command {
 				Priority:    uint16(priority),
 				Permissions: permBits,
 			}
-			if badge, e := cmd.Flags().GetString("badge"); e == nil && badge != "" {
-				r.Badge = badge
+			if icon, e := cmd.Flags().GetString("icon"); e == nil && icon != "" {
+				r.Icon = icon
 			}
 			if css, e := cmd.Flags().GetString("style"); e == nil && css != "" {
 				r.Style = css
@@ -123,7 +120,7 @@ func createRole() *cobra.Command {
 			return nil
 		},
 	}
-	c.Flags().String("badge", "", "path to badge image")
+	c.Flags().String("icon", "", "icon of role")
 	c.Flags().String("style", "", "css style of role")
 	return c
 }

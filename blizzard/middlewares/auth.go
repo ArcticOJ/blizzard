@@ -27,9 +27,9 @@ func Authentication(secret string) echo.MiddlewareFunc {
 			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
 				authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 				if len(authToken) > 0 {
-					var user user.User
-					if e := db.Database.NewSelect().Model(&user).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
-						c.Set("user", user.ID)
+					var usr user.User
+					if e := db.Database.NewSelect().Model(&usr).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
+						c.Set("user", usr.ID)
 						return next(c)
 					}
 				}

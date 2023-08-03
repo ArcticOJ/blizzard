@@ -3,135 +3,92 @@
 package contests
 
 import (
+	"blizzard/blizzard/db"
+	"blizzard/blizzard/db/models/contest"
 	"blizzard/blizzard/judge"
 	"blizzard/blizzard/models"
 	"blizzard/blizzard/models/extra"
-	"blizzard/blizzard/pb/igloo"
+	"blizzard/blizzard/pb"
 	"blizzard/blizzard/utils"
 	"context"
-	"fmt"
-	"github.com/labstack/echo/v4"
-	"gopkg.in/yaml.v3"
+	"github.com/google/uuid"
 	"io"
 	"mime/multipart"
 )
 
-type (
-	Metadata struct {
-		Cpu          uint32 `yaml:"cpu"`
-		Memory       uint64 `yaml:"memory"`
-		Duration     uint32 `yaml:"duration"`
-		CaseCount    uint32 `yaml:"caseCount"`
-		Input        string `yaml:"input"`
-		Output       string `yaml:"output"`
-		AllowPartial bool   `yaml:"allow_partial"`
-	}
-	Case struct {
-		Time uint32 `yaml:"time"`
-	}
-	Result struct {
-		Verdict  uint8   `json:"verdict"`
-		Memory   uint64  `json:"memory"`
-		Duration float64 `json:"duration"`
-	}
-)
-
-func Parse() *Metadata {
-	f := utils.ReadFile("/data/Dev/mock/uwu/metadata.yml")
-	var metadata Metadata
-	if e := yaml.Unmarshal(f, &metadata); e != nil {
-		return nil
-	}
-	return &metadata
-}
-
-func prepare(id uint64, file *multipart.FileHeader) (*Metadata, *igloo.Submission) {
+func prepare(id uint32, language string, problem *contest.Problem, file *multipart.FileHeader) *pb.Submission {
 	f, e := file.Open()
 	if e != nil {
-		return nil, nil
+		return nil
 	}
 	buf, e := io.ReadAll(f)
 	if e != nil {
-		return nil, nil
+		return nil
 	}
-	m := Parse()
-	return m, &igloo.Submission{
+	c := problem.Constraints
+	return &pb.Submission{
 		Id:       id,
+		Language: language,
 		Buffer:   buf,
-		Language: "cpp11",
-		Checker:  utils.ReadFile("/data/Dev/mock/test.py"),
-		Metadata: &igloo.Metadata{
-			Cpu:          m.Cpu,
-			Memory:       m.Memory,
-			Duration:     m.Duration,
-			AllowPartial: m.AllowPartial,
-			CaseCount:    m.CaseCount,
-			Input:        m.Input,
-			Output:       m.Output,
+		Problem:  problem.ID,
+		Metadata: &pb.Metadata{
+			ShortCircuit: c.ShortCircuit,
+			CaseCount:    uint32(problem.TestCount),
+			Duration:     c.TimeLimit,
+			Memory:       c.MemoryLimit,
 		},
+		Checker: utils.ReadFile("/data/Dev/mock/test.py"),
 	}
 }
 
+var id uint32 = 0
+
+func createSubmission(ctx context.Context, userId uuid.UUID, problem string, language string) *contest.Submission {
+	id++
+	sub := &contest.Submission{
+		ID:        id,
+		AuthorID:  userId,
+		ProblemID: problem,
+		Language:  language,
+	}
+	/*if _, e := db.Database.NewInsert().Model(sub).Returning("id").Exec(ctx); e != nil {
+		return nil
+	}*/
+	return sub
+}
+
 func Submit(ctx *extra.Context) models.Response {
-	// TODO: finalize response piping from judge to client
 	if ctx.RequireAuth() {
 		return nil
 	}
 	code, e := ctx.FormFile("code")
-	//problem := ctx.Param("id")
 	if e != nil {
-		return ctx.Bad("Invalid submission.")
+		return ctx.Bad("No code.")
 	}
-	_, file := prepare(1, code)
-	if ok, client := judge.PickClient(context.Background()); ok {
-		closed := false
-		conn, e := client.Judge(judge.KeyContext(context.Background()), file)
-		if e != nil {
-			return ctx.InternalServerError("Could not establish connection to judging server.")
-		}
+	// TODO: check if language is valid
+	lang := ctx.FormValue("language")
+	id := ctx.Param("id")
+	var problem contest.Problem
+	if db.Database.NewSelect().Model(&problem).Where("id = ?", id).Scan(ctx.Request().Context()) != nil {
+		return ctx.NotFound("Problem not found.")
+	}
+	dbSub := createSubmission(ctx.Request().Context(), *ctx.GetUUID(), problem.ID, lang)
+	if dbSub == nil {
+		return ctx.InternalServerError("Failed to create submission!")
+	}
+	sub := prepare(dbSub.ID, lang, &problem, code)
+	if _judge := judge.Enqueue(sub, dbSub); _judge != nil {
+		// number of cases + final response
+		res := make(chan interface{}, sub.Metadata.CaseCount+1)
+		_judge()
+		judge.ResultWatcher.Track(sub.Id, res)
 		stream := ctx.StreamResponse()
-		_res := make(chan interface{}, 3)
 		go func() {
 			<-ctx.Request().Context().Done()
-			closed = true
-			//close(_res)
+			judge.ResultWatcher.Untrack(sub.Id, res)
 		}()
-		go func() {
-			for r := range _res {
-				if !closed {
-					if _r, _ok := r.(*igloo.JudgeResult_Case); _ok {
-						stream.Write(_r.Case)
-					} else {
-						stream.Write(r)
-					}
-				}
-				// Handle response here.
-				fmt.Println(r)
-			}
-		}()
-		// TODO: remove this, create a long-running listener in the background and hook a listener and dispose on response close.
-		go func() {
-			for {
-				res, err := conn.Recv()
-				if err != nil {
-					closed = true
-					_ = conn.Close()
-					break
-				}
-				if r, _ok := res.Result.(*igloo.JudgeResult_Case); _ok {
-					_res <- r
-				} else {
-					r := res.GetFinal()
-					_res <- echo.Map{
-						"final":          true,
-						"compilerOutput": r.CompilerOutput,
-						"verdict":        r.Verdict,
-					}
-				}
-			}
-		}()
-		for !closed {
-
+		for r := range res {
+			stream.Write(r)
 		}
 	} else {
 		return ctx.InternalServerError("Could not find a suitable judge server.")

@@ -4,19 +4,21 @@ import (
 	"blizzard/blizzard/models/extra"
 	"blizzard/blizzard/routes/auth"
 	"blizzard/blizzard/routes/contests"
-	"blizzard/blizzard/routes/feeds"
 	"blizzard/blizzard/routes/oauth"
+	"blizzard/blizzard/routes/posts"
 	"blizzard/blizzard/routes/problems"
 	"blizzard/blizzard/routes/root"
 	"blizzard/blizzard/routes/user"
+	"blizzard/blizzard/routes/users"
 )
 
 var Map = map[string]extra.RouteMap{
 	"/problems": problems.Map,
-	"/feeds":    feeds.Map,
+	"/posts":    posts.Map,
 	"/contests": contests.Map,
 	"/auth":     auth.Map,
 	"/oauth":    oauth.Map,
+	"/users":    users.Map,
 	"/user":     user.Map,
 	"/":         root.Map,
 }

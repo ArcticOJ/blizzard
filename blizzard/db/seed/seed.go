@@ -2,6 +2,7 @@ package seed
 
 import (
 	"blizzard/blizzard/db/models/contest"
+	"blizzard/blizzard/db/models/post"
 	"blizzard/blizzard/db/models/user"
 	"context"
 	"github.com/uptrace/bun"
@@ -14,14 +15,16 @@ var intermediaryModels = []any{
 }
 
 var models = []any{
-	// users
 	(*user.User)(nil),
 	(*user.OAuthConnection)(nil),
 	(*user.Role)(nil),
+
 	(*contest.Contest)(nil),
 	(*contest.Problem)(nil),
 	(*contest.Submission)(nil),
-	// intermediary models
+
+	(*post.Post)(nil),
+	(*post.Comment)(nil),
 }
 
 func RegisterModels(db *bun.DB) {

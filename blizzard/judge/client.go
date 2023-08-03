@@ -1,7 +1,7 @@
 package judge
 
 import (
-	"blizzard/blizzard/pb/igloo"
+	"blizzard/blizzard/pb"
 	"context"
 	"go.arsenm.dev/drpc/muxconn"
 	"net"
@@ -9,43 +9,44 @@ import (
 )
 
 type (
-	IglooClient struct {
-		igloo.DRPCIglooClient
-		Address string `json:"-"`
+	Client struct {
+		rpc        pb.DRPCIglooClient
+		Name       string                    `json:"name"`
+		Specs      *pb.InstanceSpecification `json:"specs"`
+		privateKey string
+		address    string
 	}
-	IglooCluster = map[string]IglooClient
 )
 
-func Renew(ctx context.Context, cluster IglooCluster, name string) (*IglooClient, bool) {
-	if client, ok := cluster[name]; ok {
-		if client.DRPCIglooClient != nil {
-			alive, e := client.Alive(KeyContext(ctx), nil)
-			if e != nil {
-				_ = client.DRPCConn().Close()
-			} else if alive.GetValue() {
-				return &client, true
-			}
-		}
-		dial, e := net.DialTimeout("tcp", client.Address, time.Millisecond*300)
+func checkAlive(client *Client) bool {
+	if client.rpc != nil {
+		alive, e := client.rpc.Alive(keyedContext(context.Background(), client), nil)
 		if e != nil {
-			return nil, false
-		}
-		conn, e := muxconn.New(dial)
-		if e == nil {
-			client.DRPCIglooClient = igloo.NewDRPCIglooClient(conn)
-			cluster[name] = client
-			return &client, true
+			_ = client.rpc.DRPCConn().Close()
+		} else if alive.Value {
+			return true
 		}
 	}
-	return nil, false
+	dial, e := net.DialTimeout("tcp", client.address, time.Millisecond*300)
+	if e != nil {
+		return false
+	}
+	conn, e := muxconn.New(dial)
+	if e == nil {
+		client.rpc = pb.NewDRPCIglooClient(conn)
+		return true
+	}
+	return false
 }
 
-func (client *IglooClient) Ping(ctx context.Context) (specs *igloo.InstanceSpecification, responseTime float64) {
+func (client *Client) Ping(ctx context.Context) (bool, float64) {
 	start := time.Now()
-	specs, e := client.Specification(KeyContext(ctx), nil)
-	if e != nil {
-		return nil, -1
+	if checkAlive(client) {
+		alive, e := client.rpc.Alive(keyedContext(ctx, client), nil)
+		if e != nil {
+			return false, -1
+		}
+		return alive.Value, float64(time.Since(start).Nanoseconds()) / 1e6
 	}
-	responseTime = float64(time.Since(start).Nanoseconds()) / 1e6
-	return
+	return false, -1
 }

@@ -25,6 +25,15 @@ func ArrayIncludes[T comparable](arr []T, item T) bool {
 	return false
 }
 
+func ArrayRemove[T comparable](arr []T, predicate func(T) bool) []T {
+	for i := range arr {
+		if predicate(arr[i]) {
+			return append(arr[:i], arr[i+1:]...)
+		}
+	}
+	return arr
+}
+
 func DecodeBase64ToString(b64 string) string {
 	b, e := base64.RawStdEncoding.DecodeString(b64)
 	if e != nil {

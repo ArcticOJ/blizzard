@@ -2,7 +2,7 @@
 // protoc-gen-go-drpc version: v0.0.32
 // source: igloo.proto
 
-package igloo
+package pb
 
 import (
 	context "context"
@@ -43,6 +43,7 @@ type DRPCIglooClient interface {
 	Alive(ctx context.Context, in *emptypb.Empty) (*wrapperspb.BoolValue, error)
 	Specification(ctx context.Context, in *emptypb.Empty) (*InstanceSpecification, error)
 	Judge(ctx context.Context, in *Submission) (DRPCIgloo_JudgeClient, error)
+	Cancel(ctx context.Context, in *wrapperspb.UInt32Value) (*emptypb.Empty, error)
 }
 
 type drpcIglooClient struct {
@@ -109,10 +110,20 @@ func (x *drpcIgloo_JudgeClient) RecvMsg(m *JudgeResult) error {
 	return x.MsgRecv(m, drpcEncoding_File_igloo_proto{})
 }
 
+func (c *drpcIglooClient) Cancel(ctx context.Context, in *wrapperspb.UInt32Value) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/igloo.Igloo/Cancel", drpcEncoding_File_igloo_proto{}, in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type DRPCIglooServer interface {
 	Alive(context.Context, *emptypb.Empty) (*wrapperspb.BoolValue, error)
 	Specification(context.Context, *emptypb.Empty) (*InstanceSpecification, error)
 	Judge(*Submission, DRPCIgloo_JudgeStream) error
+	Cancel(context.Context, *wrapperspb.UInt32Value) (*emptypb.Empty, error)
 }
 
 type DRPCIglooUnimplementedServer struct{}
@@ -129,9 +140,13 @@ func (s *DRPCIglooUnimplementedServer) Judge(*Submission, DRPCIgloo_JudgeStream)
 	return drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
 }
 
+func (s *DRPCIglooUnimplementedServer) Cancel(context.Context, *wrapperspb.UInt32Value) (*emptypb.Empty, error) {
+	return nil, drpcerr.WithCode(errors.New("Unimplemented"), drpcerr.Unimplemented)
+}
+
 type DRPCIglooDescription struct{}
 
-func (DRPCIglooDescription) NumMethods() int { return 3 }
+func (DRPCIglooDescription) NumMethods() int { return 4 }
 
 func (DRPCIglooDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver, interface{}, bool) {
 	switch n {
@@ -162,6 +177,15 @@ func (DRPCIglooDescription) Method(n int) (string, drpc.Encoding, drpc.Receiver,
 						&drpcIgloo_JudgeStream{in2.(drpc.Stream)},
 					)
 			}, DRPCIglooServer.Judge, true
+	case 3:
+		return "/igloo.Igloo/Cancel", drpcEncoding_File_igloo_proto{},
+			func(srv interface{}, ctx context.Context, in1, in2 interface{}) (drpc.Message, error) {
+				return srv.(DRPCIglooServer).
+					Cancel(
+						ctx,
+						in1.(*wrapperspb.UInt32Value),
+					)
+			}, DRPCIglooServer.Cancel, true
 	default:
 		return "", nil, nil, nil, false
 	}
@@ -214,4 +238,20 @@ type drpcIgloo_JudgeStream struct {
 
 func (x *drpcIgloo_JudgeStream) Send(m *JudgeResult) error {
 	return x.MsgSend(m, drpcEncoding_File_igloo_proto{})
+}
+
+type DRPCIgloo_CancelStream interface {
+	drpc.Stream
+	SendAndClose(*emptypb.Empty) error
+}
+
+type drpcIgloo_CancelStream struct {
+	drpc.Stream
+}
+
+func (x *drpcIgloo_CancelStream) SendAndClose(m *emptypb.Empty) error {
+	if err := x.MsgSend(m, drpcEncoding_File_igloo_proto{}); err != nil {
+		return err
+	}
+	return x.CloseSend()
 }

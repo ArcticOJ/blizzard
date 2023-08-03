@@ -5,9 +5,11 @@ import (
 	"blizzard/blizzard/db"
 	"blizzard/blizzard/db/models/user"
 	"blizzard/blizzard/models"
+	"crypto/md5"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/tmthrgd/go-hex"
 	"github.com/uptrace/bun"
 	"net/http"
 	"time"
@@ -46,7 +48,7 @@ func (ctx Context) StreamResponse() *models.ResponseStream {
 	h.Set("Transfer-Encoding", "chunked")
 	h.Set("Connection", "keep-alive")
 	r.WriteHeader(http.StatusOK)
-	return models.New(r)
+	return models.NewStream(r)
 }
 
 func (ctx Context) Bad(message string, context ...interface{}) models.Response {
@@ -119,8 +121,8 @@ func (ctx Context) PutCookie(name string, value string, exp time.Time, sessionOn
 	}
 	cookie.SameSite = http.SameSiteLaxMode
 	cookie.Path = "/"
-	// TODO: add secure property to config
-	//cookie.Secure = true
+	cookie.HttpOnly = true
+	cookie.Secure = true
 	ctx.SetCookie(cookie)
 }
 
@@ -159,6 +161,12 @@ func (ctx Context) Authenticate(uuid uuid.UUID, remember bool) models.Response {
 	}
 	ctx.PutCookie("session", signedToken, lifespan, !remember)
 	return ctx.Success()
+}
+
+func (ctx Context) AddAvatar(usr *user.User) {
+	h := md5.Sum([]byte(usr.Email))
+	usr.Avatar = hex.EncodeToString(h[:])
+	usr.Email = ""
 }
 
 func (ctx Context) RequireAuth() bool {

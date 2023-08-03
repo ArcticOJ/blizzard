@@ -1,13 +1,13 @@
 package main
 
 import (
+	"blizzard/blizzard/cache"
 	"blizzard/blizzard/config"
 	"blizzard/blizzard/db"
 	"blizzard/blizzard/judge"
 	"blizzard/blizzard/logger"
 	"blizzard/blizzard/oauth"
 	"blizzard/blizzard/server/http"
-	"blizzard/blizzard/server/rpc"
 	"blizzard/blizzard/server/utils"
 	"blizzard/blizzard/utils/crypto"
 )
@@ -25,9 +25,10 @@ func init() {
 	db.Init()
 	judge.Init()
 	oauth.Init()
+	cache.Init()
 }
 
 func main() {
-	go rpc.StartRpc()
+	go judge.ResultWatcher.Watch()
 	utils.Listen(http.CreateServer())
 }

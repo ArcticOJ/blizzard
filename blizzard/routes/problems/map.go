@@ -7,11 +7,11 @@ import (
 
 var Map = extra.RouteMap{
 	"/": {
-		Methods: []models.Method{models.Get, models.Post},
+		Methods: []models.Method{models.Get},
 		Handler: Index,
 	},
 	"/:problem": {
-		Methods: []models.Method{models.Get, models.Patch, models.Delete},
+		Methods: []models.Method{models.Get, models.Patch, models.Delete, models.Post},
 		Handler: Problem,
 	},
 }

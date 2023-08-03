@@ -1,4 +1,4 @@
-package feeds
+package posts
 
 import (
 	"blizzard/blizzard/models"

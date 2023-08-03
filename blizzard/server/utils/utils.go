@@ -16,5 +16,9 @@ func Uptime() int64 {
 
 func Listen(router *echo.Echo) {
 	router.HideBanner = true
-	logger.Logger.Fatal().Err(router.Start(fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port)))
+	router.HidePort = true
+	router.IPExtractor = echo.ExtractIPFromRealIPHeader()
+	addr := fmt.Sprintf("%s:%d", config.Config.Host, config.Config.Port)
+	logger.Logger.Info().Msgf("starting server on %s", addr)
+	logger.Logger.Fatal().Err(router.Start(addr)).Send()
 }
