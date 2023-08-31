@@ -14,4 +14,8 @@ var Map = extra.RouteMap{
 		Methods: []models.Method{models.Get, models.Patch, models.Delete, models.Post},
 		Handler: Problem,
 	},
+	"/:problem/submit": {
+		Methods: []models.Method{models.Post},
+		Handler: Submit,
+	},
 }

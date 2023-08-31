@@ -6,11 +6,11 @@ import (
 
 type (
 	Contest struct {
-		ID         uint32       `bun:",pk,autoincrement" json:"id"`
-		Title      string       `bun:",notnull" json:"title"`
-		Tags       []string     `bun:",array,notnull" json:"tags"`
-		Organizers []*user.User `bun:"m2m:contest_to_organizers,join:Contest=User"`
-		Problems   []*Problem   `bun:"m2m:contest_to_problems,join:Contest=Problem" json:"contests"`
+		ID         uint32      `bun:",pk,autoincrement" json:"id"`
+		Title      string      `bun:",notnull" json:"title"`
+		Tags       []string    `bun:",array,notnull" json:"tags"`
+		Organizers []user.User `bun:"m2m:contest_to_organizers,join:Contest=User"`
+		Problems   []Problem   `bun:"m2m:contest_to_problems,join:Contest=Problem" json:"contests"`
 	}
 
 	ContestToOrganizer struct {

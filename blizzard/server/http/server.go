@@ -9,6 +9,7 @@ import (
 	"blizzard/blizzard/routes"
 	"blizzard/blizzard/validator"
 	"errors"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/time/rate"
@@ -34,19 +35,6 @@ func createHandler(handler extra.Handler) echo.HandlerFunc {
 
 func CreateServer() *echo.Echo {
 	e := echo.New()
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
-		code, message := http.StatusInternalServerError, "Internal Server Error"
-		var er *echo.HTTPError
-		if errors.As(err, &er) {
-			code = er.Code
-			message = er.Message.(string)
-		}
-		_ = c.JSONPretty(code, models.Error{Code: code, Message: message}, "\t")
-	}
-	e.Validator = validator.New()
-	e.Use(middleware.Recover())
-	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(rate.Limit(config.Config.RateLimit))))
-	e.Pre(middleware.RemoveTrailingSlash())
 	if config.Config.EnableCORS {
 		e.Use(middleware.CORS())
 	}
@@ -67,6 +55,40 @@ func CreateServer() *echo.Echo {
 			},
 		}))
 	}
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		if c.Response().Committed {
+			return
+		}
+		code, message := http.StatusInternalServerError, "Internal Server Error"
+		var er *echo.HTTPError
+		if errors.As(err, &er) {
+			code = er.Code
+			message = er.Message.(string)
+		}
+		err = c.JSON(code, models.Error{Code: code, Message: message})
+		if err != nil {
+			e.Logger.Error(err)
+		}
+	}
+	e.Validator = validator.New()
+	rConf := middleware.RecoverConfig{
+		DisablePrintStack: true,
+		DisableStackAll:   true,
+	}
+	if config.Config.Debug {
+		rConf = middleware.RecoverConfig{
+			DisableStackAll: true,
+			LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
+				logger.Logger.Err(err).Str("url", c.Request().URL.RequestURI()).Send()
+				fmt.Println(string(stack))
+				return nil
+			},
+		}
+	}
+	e.Use(middleware.RecoverWithConfig(rConf))
+	// TODO: migrate to redis-based rate limiter
+	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(rate.Limit(config.Config.RateLimit))))
+	e.Pre(middleware.RemoveTrailingSlash())
 	e.Use(middlewares.Authentication(config.Config.PrivateKey))
 	for route, group := range routes.Map {
 		g := e.Group(route)

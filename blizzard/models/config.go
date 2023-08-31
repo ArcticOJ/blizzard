@@ -2,39 +2,52 @@ package models
 
 type (
 	BlizzardConfig struct {
-		Host       string
+		Address    `yaml:",inline"`
 		PrivateKey string
-		Port       uint16
 		Debug      bool
 		EnableCORS bool
 		RateLimit  float64
 		Database   *DatabaseConfig
 		Storage    *StorageConfig
-		Judges     map[string]*Judge
+		Judges     map[string]string
 		OAuth      map[string]*OAuthProvider
+		Redis      *RedisConfig
+		RabbitMQ   *RabbitMQConfig
+	}
+
+	RabbitMQConfig struct {
+		Username string
+		Password string
+		Address  `yaml:",inline"`
+	}
+
+	Address struct {
+		Host string
+		Port uint16
+	}
+
+	RedisConfig struct {
+		Address `yaml:",inline"`
+		DB      int
 	}
 
 	OAuthProvider struct {
-		ClientId     string
+		ClientID     string
 		ClientSecret string
 	}
 
 	StorageConfig struct {
-		Problems string `yaml:"problems"`
-		Posts    string `yaml:"posts"`
-		READMEs  string `yaml:"readmes"`
+		Problems    string
+		Posts       string
+		READMEs     string
+		Submissions string
 	}
 
 	DatabaseConfig struct {
-		Address  string
+		Address  `yaml:",inline"`
 		Username string
 		Password string
 		Name     string
 		Secure   bool
-	}
-
-	Judge struct {
-		Address string
-		Key     string
 	}
 )

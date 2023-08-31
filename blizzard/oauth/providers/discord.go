@@ -11,7 +11,7 @@ import (
 
 type (
 	discordUserInfo struct {
-		Id       string `json:"id"`
+		ID       string `json:"id"`
 		Username string `json:"username"`
 		Tag      string `json:"discriminator"`
 		Avatar   string `json:"avatar"`
@@ -31,7 +31,7 @@ func GetDiscordUser(client *http.Client) *UserInfo {
 		return nil
 	}
 	inf := &UserInfo{
-		Id:       info.Id,
+		ID:       info.ID,
 		Username: info.Username,
 	}
 	// user has migrated to the new username system
@@ -43,7 +43,7 @@ func GetDiscordUser(client *http.Client) *UserInfo {
 		if strings.HasPrefix(info.Avatar, "a_") {
 			ext = "gif"
 		}
-		avatarUrl = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.%s", info.Id, info.Avatar, ext)
+		avatarUrl = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.%s", info.ID, info.Avatar, ext)
 	} else {
 		avatarUrl = fmt.Sprintf("https://cdn.discordapp.com/embed/avatars/%d.png", utils.ParseInt(info.Tag)%5)
 	}

@@ -6,8 +6,8 @@ import (
 )
 
 var Map = extra.RouteMap{
-	"/health": {
+	"/status": {
 		Methods: []models.Method{models.Get},
-		Handler: Health,
+		Handler: Status,
 	},
 }

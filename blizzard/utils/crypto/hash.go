@@ -9,7 +9,7 @@ import (
 
 var hmacHash hash.Hash
 
-func Init() {
+func init() {
 	hmacHash = hmac.New(sha256.New, []byte(config.Config.PrivateKey))
 }
 

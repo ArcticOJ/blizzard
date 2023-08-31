@@ -9,7 +9,7 @@ import (
 
 var Logger zerolog.Logger
 
-func Init() {
+func init() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
 	Logger = zerolog.New(zerolog.ConsoleWriter{
 		Out: os.Stdout,
@@ -22,4 +22,11 @@ func Init() {
 			}
 		},
 	}).With().Timestamp().Logger()
+}
+
+func Panic(e error, msg string, args ...interface{}) {
+	if e == nil {
+		return
+	}
+	Logger.Fatal().Err(e).Msgf(msg, args...)
 }

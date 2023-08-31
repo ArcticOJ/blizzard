@@ -12,5 +12,5 @@ type Role struct {
 	Style       string                `bun:",default:'background-color:#90a8bb;color:black'" json:"style,omitempty"`
 	NameStyle   string                `json:"nameStyle"`
 	Priority    uint16                `bun:",notnull,default:1000" json:"priority,omitempty"`
-	Members     []*User               `bun:"m2m:user_to_roles,join:Role=User" json:"members,omitempty"`
+	Members     []User                `bun:"m2m:user_to_roles,join:Role=User" json:"members,omitempty"`
 }

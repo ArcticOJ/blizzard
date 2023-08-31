@@ -44,7 +44,6 @@ func (ctx Context) Arr(arr ...interface{}) models.Response {
 func (ctx Context) StreamResponse() *models.ResponseStream {
 	r := ctx.Response()
 	h := r.Header()
-	h.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	h.Set("Transfer-Encoding", "chunked")
 	h.Set("Connection", "keep-alive")
 	r.WriteHeader(http.StatusOK)
@@ -138,7 +137,7 @@ func (ctx Context) DeleteCookie(name string) {
 }
 
 func (ctx Context) CommitResponse(res models.Response) error {
-	return ctx.JSONPretty(res.StatusCode(), res.Body(), "\t")
+	return ctx.JSON(res.StatusCode(), res.Body())
 }
 
 func (ctx Context) Authenticate(uuid uuid.UUID, remember bool) models.Response {

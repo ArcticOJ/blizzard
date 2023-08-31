@@ -24,7 +24,7 @@ var UserInfoHandler = map[string]providers.UserInfoHandler{
 
 var AllowedActions = []string{"link", "register", "login"}
 
-func Init() {
+func init() {
 	for name, provider := range config.Config.OAuth {
 		if c, ok := providerConf[name]; ok {
 			EnabledProviders = append(EnabledProviders, name)
@@ -33,7 +33,7 @@ func Init() {
 				RedirectURL:  fmt.Sprintf("https://localhost/oauth/%s/callback", name),
 				Scopes:       c.Scopes,
 				Endpoint:     c.Endpoint,
-				ClientID:     provider.ClientId,
+				ClientID:     provider.ClientID,
 				ClientSecret: provider.ClientSecret,
 			}
 		}

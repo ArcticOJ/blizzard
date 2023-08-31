@@ -8,7 +8,6 @@ import (
 	"blizzard/blizzard/utils"
 	"encoding/base64"
 	"github.com/labstack/echo/v4"
-	"github.com/uptrace/bun"
 	"strconv"
 	"time"
 )
@@ -19,10 +18,13 @@ func ApiKey(ctx *extra.Context) models.Response {
 	}
 	switch ctx.Method() {
 	case models.Get:
+		var apiKey string
+		uuid := ctx.GetUUID()
+		if db.Database.NewSelect().Model(&user.User{ID: *uuid}).Column("id").WherePK().Column("api_key").Scan(ctx.Request().Context(), apiKey) != nil {
+			apiKey = ""
+		}
 		return ctx.Respond(echo.Map{
-			"apiKey": ctx.GetDetailedUser(func(query *bun.SelectQuery) *bun.SelectQuery {
-				return query.Column("api_key")
-			}).ApiKey,
+			"apiKey": apiKey,
 		})
 	case models.Patch:
 		uuid := ctx.GetUUID()

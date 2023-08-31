@@ -34,6 +34,23 @@ func ArrayRemove[T comparable](arr []T, predicate func(T) bool) []T {
 	return arr
 }
 
+func ArrayFind[T comparable](arr []T, predicate func(T) bool) bool {
+	for i := range arr {
+		if predicate(arr[i]) {
+			return true
+		}
+	}
+	return false
+}
+
+func ArrayFill[T any](val T, count int) (arr []T) {
+	arr = make([]T, count)
+	for i := range arr {
+		arr[i] = val
+	}
+	return
+}
+
 func DecodeBase64ToString(b64 string) string {
 	b, e := base64.RawStdEncoding.DecodeString(b64)
 	if e != nil {

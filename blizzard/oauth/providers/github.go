@@ -9,7 +9,7 @@ import (
 type (
 	githubUserInfo struct {
 		Username  string      `json:"login"`
-		Id        json.Number `json:"id"`
+		ID        json.Number `json:"id"`
 		AvatarUrl string      `json:"avatar_url"`
 	}
 )
@@ -25,7 +25,7 @@ func GetGitHubUser(client *http.Client) *UserInfo {
 		return nil
 	}
 	return &UserInfo{
-		Id:       info.Id.String(),
+		ID:       info.ID.String(),
 		Username: info.Username,
 		Avatar:   info.AvatarUrl,
 	}

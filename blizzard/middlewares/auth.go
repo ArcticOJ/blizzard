@@ -13,10 +13,7 @@ import (
 
 func invalidate(ctx *extra.Context, next echo.HandlerFunc) error {
 	ctx.Set("user", nil)
-	p := ctx.Request().URL.Path
-	if !(strings.HasPrefix(p, "/auth/") || strings.HasPrefix(p, "/oauth/")) {
-		ctx.DeleteCookie("session")
-	}
+	ctx.DeleteCookie("session")
 	return next(ctx)
 }
 
@@ -51,7 +48,11 @@ func Authentication(secret string) echo.MiddlewareFunc {
 				return invalidate(ctx, next)
 			}
 			if session, ok := token.Claims.(*models.Session); ok && token.Valid {
-				ctx.Set("user", session.UUID)
+				if ok, e := db.Database.NewSelect().Model((*user.User)(nil)).Where("id = ?", session.UUID).Exists(ctx.Request().Context()); ok && e == nil {
+					ctx.Set("user", session.UUID)
+				} else {
+					return invalidate(ctx, next)
+				}
 			} else {
 				return invalidate(ctx, next)
 			}

@@ -6,6 +6,7 @@ import (
 )
 
 func Index(ctx *extra.Context) models.Response {
+	// TODO: delete this route
 	if ctx.RequireAuth() {
 		return nil
 	}

@@ -1,21 +1,42 @@
-host: 0.0.0.0
-port: 2999
-privateKey: private_key_used_to_hash_password
-debug: false
-enableCors: true
-rateLimit: 1000
+host: 0.0.0.0 # host blizzard should run on
+privateKey: d057ab405abcee847b3c0ee6e8324cfbdb693803 # private key used to encrypt sessions
+port: 2999 # port blizzard should run on
+debug: true # whether to enable debug mode, deprecated, will be removed in the future
+enableCors: true # where to enable cors
+rateLimit: 100 # limit to x requests per second
+
 judges:
-  north-pole: 0.0.0.0:172
+  ethereal: 192.168.31.202:2345 # http address of judge
+
 oauth:
   github:
-    clientId: your_github_client_id
-    clientSecret: your_github_client_secret
+    clientId: ba4983ed38e2e43dfbeb
+    clientSecret: 63b04c44475d709f939529b193551acd119a001c
   discord:
-    clientId: your_discord_client_id
-    clientSecret: your_discord_client_secret
+    clientId: 1089944774880018493
+    clientSecret: rKLXDoSAiiZxBtAXhFa_vovmwMsBUYfU
+
+storage:
+  problems: /path/to/problems
+  posts: /path/to/posts
+  submissions: /path/to/submissions
+  readmes: /path/to/readmes
+
+redis:
+  host: 192.168.31.240
+  port: 6379
+  db: 0
+
+rabbitmq:
+  username: guest
+  password: guest
+  host: localhost
+  port: 5672
+
 database:
-  secure: false
-  address: db_addr
-  username: db_username
-  password: db_pwd
-  name: db_name
+  secure: false # whether to use tls for connection to db
+  host: localhost
+  port: 5432
+  username: postgres
+  password: postgres
+  name: arctic

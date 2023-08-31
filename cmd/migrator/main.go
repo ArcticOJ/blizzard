@@ -14,20 +14,6 @@ import (
 
 var migrator *migrate.Migrator
 
-func init() {
-	logger.Init()
-}
-
-func init() {
-	config.Load()
-	// enable debug mode to trace queries
-	config.Config.Debug = true
-}
-
-func init() {
-	db.Init()
-}
-
 func _init() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init",
@@ -205,8 +191,9 @@ var cmds = []*cobra.Command{
 }
 
 func main() {
+	config.Config.Debug = true
 	migrator = migrate.NewMigrator(db.Database, migrations.Migrations)
-	root := &cobra.Command{
+	root := cobra.Command{
 		Use:   "migrator",
 		Short: "blizzard migration helper",
 	}

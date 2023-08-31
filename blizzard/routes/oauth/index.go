@@ -11,7 +11,7 @@ import (
 )
 
 type connection struct {
-	Id       string `json:"id"`
+	ID       string `json:"id"`
 	Username string `json:"username"`
 }
 
@@ -27,7 +27,7 @@ func Index(ctx *extra.Context) models.Response {
 		debug.Dump(c)
 		for _, p := range c {
 			m[p.Provider] = connection{
-				Id:       p.ID,
+				ID:       p.ID,
 				Username: p.Username,
 			}
 		}

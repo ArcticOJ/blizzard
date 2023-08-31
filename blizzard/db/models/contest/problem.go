@@ -19,12 +19,12 @@ type (
 	}
 
 	ProblemContent struct {
-		Title           string             `bun:",notnull" json:"title,omitempty"`
-		Statement       string             `bun:",notnull" json:"statement,omitempty"`
-		Input           string             `bun:",notnull" json:"input,omitempty"`
-		Output          string             `bun:",notnull" json:"output,omitempty"`
-		Scoring         []string           `bun:",array" json:"scoring,omitempty"`
-		SampleTestCases []*SampleTestCases `json:"sampleTestCases,omitempty"`
+		Title           string            `bun:",notnull" json:"title,omitempty"`
+		Statement       string            `bun:",notnull" json:"statement,omitempty"`
+		Input           string            `bun:",notnull" json:"input,omitempty"`
+		Output          string            `bun:",notnull" json:"output,omitempty"`
+		Scoring         []string          `bun:",array" json:"scoring,omitempty"`
+		SampleTestCases []SampleTestCases `json:"sampleTestCases,omitempty"`
 	}
 
 	SampleTestCases struct {
@@ -34,11 +34,12 @@ type (
 	}
 
 	Constraints struct {
-		IsInteractive bool    `bun:",default:false" json:"isInteractive"`
-		TimeLimit     float32 `bun:",default:1" json:"timeLimit"`
-		MemoryLimit   uint32  `bun:",default:128" json:"memoryLimit"`
-		OutputLimit   uint32  `bun:",default:64" json:"outputLimit"`
-		AllowPartial  bool    `bun:",default:false" json:"allowPartial"`
-		ShortCircuit  bool    `bun:",default:false" json:"shortCircuit"`
+		IsInteractive    bool     `bun:",default:false" json:"isInteractive"`
+		TimeLimit        float32  `bun:",default:1" json:"timeLimit"`
+		MemoryLimit      uint32   `bun:",default:128" json:"memoryLimit"`
+		OutputLimit      uint32   `bun:",default:64" json:"outputLimit"`
+		AllowPartial     bool     `bun:",default:false" json:"allowPartial"`
+		AllowedLanguages []string `bun:",array" json:"allowedLanguages"`
+		ShortCircuit     bool     `bun:",default:false" json:"shortCircuit"`
 	}
 )

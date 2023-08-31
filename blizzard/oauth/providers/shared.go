@@ -14,7 +14,7 @@ type (
 
 	UserInfo struct {
 		Username string `json:"username"`
-		Id       string `json:"id"`
+		ID       string `json:"id"`
 		Avatar   string `json:"avatar"`
 	}
 

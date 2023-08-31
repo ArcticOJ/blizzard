@@ -11,7 +11,7 @@ import (
 	"blizzard/blizzard/utils"
 	"blizzard/blizzard/utils/crypto"
 	"crypto/hmac"
-	"fmt"
+	"errors"
 	"github.com/jackc/pgerrcode"
 	"github.com/labstack/echo/v4"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -28,13 +28,13 @@ func HandleLink(ctx *extra.Context, provider string, res *providers.UserInfo) mo
 	if _, e := db.Database.NewInsert().Model(&user.OAuthConnection{
 		UserID:   *uuid,
 		Username: res.Username,
-		ID:       res.Id,
+		ID:       res.ID,
 		Provider: provider,
 	}).Exec(ctx.Request().Context()); e != nil {
-		if err, ok := e.(pgdriver.Error); ok && err.Field('C') == pgerrcode.UniqueViolation {
+		var err pgdriver.Error
+		if errors.As(e, &err) && err.Field('C') == pgerrcode.UniqueViolation {
 			return ctx.Forbid("This ID is already bound to another account.")
 		}
-		fmt.Println(e)
 		debug.Dump(e)
 	}
 	return nil
@@ -44,7 +44,7 @@ func HandleLogin(ctx *extra.Context, provider string, res *providers.UserInfo, s
 	var c []user.OAuthConnection
 	if e := db.Database.NewSelect().
 		Model(&c).
-		Where("provider = ? AND id = ?", provider, res.Id).
+		Where("provider = ? AND id = ?", provider, res.ID).
 		Limit(1).
 		Scan(ctx.Request().Context()); e != nil {
 		debug.Dump(e)

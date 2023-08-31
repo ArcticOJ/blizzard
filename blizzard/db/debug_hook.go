@@ -9,20 +9,20 @@ import (
 	"time"
 )
 
-type QueryHook struct {
+type DebugHook struct {
 }
 
-var _ bun.QueryHook = (*QueryHook)(nil)
+var _ bun.QueryHook = (*DebugHook)(nil)
 
-func (*QueryHook) Init(_ *bun.DB) {
+func (*DebugHook) Init(_ *bun.DB) {
 	logger.Logger.Debug().Msg("initializing database")
 }
 
-func (*QueryHook) BeforeQuery(ctx context.Context, _ *bun.QueryEvent) context.Context {
+func (*DebugHook) BeforeQuery(ctx context.Context, _ *bun.QueryEvent) context.Context {
 	return ctx
 }
 
-func (*QueryHook) AfterQuery(_ context.Context, event *bun.QueryEvent) {
+func (*DebugHook) AfterQuery(_ context.Context, event *bun.QueryEvent) {
 	now := time.Now()
 	dur := now.Sub(event.StartTime)
 	log := logger.Logger.Debug().Time("timestamp", now).Str("operation", event.Operation()).Str("duration", dur.Round(time.Microsecond).String()).Str("query", event.Query)

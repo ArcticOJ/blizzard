@@ -5,7 +5,6 @@ import (
 	"blizzard/blizzard/core"
 	"blizzard/blizzard/db"
 	"blizzard/blizzard/db/models/user"
-	"blizzard/blizzard/logger"
 	"blizzard/blizzard/logger/debug"
 	"blizzard/blizzard/permission"
 	"context"
@@ -15,20 +14,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-func init() {
-	logger.Init()
-}
-
-func init() {
-	config.Load()
-	// enable debug mode to trace queries
-	config.Config.Debug = true
-}
-
-func init() {
-	db.Init()
-}
 
 func createUser() *cobra.Command {
 	c := &cobra.Command{
@@ -131,6 +116,7 @@ var cmds = []*cobra.Command{
 }
 
 func main() {
+	config.Config.Debug = true
 	root := &cobra.Command{
 		Use:   "manager",
 		Short: "blizzard database manager",
