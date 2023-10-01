@@ -1,6 +1,0 @@
-Caddyfile
-tmp/
-.idea/
-**/._**
-blizzard.yml
-cmd/migrator/fixture.yml
