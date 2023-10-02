@@ -1,21 +1,18 @@
 package problems
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{
+var Map = http.RouteMap{
 	"/": {
-		Methods: []models.Method{models.Get},
+		Methods: []http.Method{http.Get},
 		Handler: Index,
 	},
 	"/:problem": {
-		Methods: []models.Method{models.Get, models.Patch, models.Delete, models.Post},
+		Methods: []http.Method{http.Get, http.Patch, http.Delete, http.Post},
 		Handler: Problem,
 	},
 	"/:problem/submit": {
-		Methods: []models.Method{models.Post},
+		Methods: []http.Method{http.Post},
 		Handler: Submit,
 	},
 }

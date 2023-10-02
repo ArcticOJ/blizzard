@@ -1,25 +1,22 @@
 package oauth
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{
+var Map = http.RouteMap{
 	"/": {
-		Methods: []models.Method{models.Get},
+		Methods: []http.Method{http.Get},
 		Handler: Index,
 	},
 	"/:provider": {
-		Methods: []models.Method{models.Get},
+		Methods: []http.Method{http.Get},
 		Handler: CreateUrl,
 	},
 	"/:provider/unlink": {
-		Methods: []models.Method{models.Delete},
+		Methods: []http.Method{http.Delete},
 		Handler: Unlink,
 	},
 	"/:provider/validate": {
-		Methods: []models.Method{models.Post},
+		Methods: []http.Method{http.Post},
 		Handler: Validate,
 	},
 }

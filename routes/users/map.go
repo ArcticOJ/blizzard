@@ -1,13 +1,10 @@
 package users
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{
+var Map = http.RouteMap{
 	"/": {
-		Methods: []models.Method{models.Get, models.Delete},
+		Methods: []http.Method{http.Get, http.Delete},
 		Handler: Index,
 	},
 }

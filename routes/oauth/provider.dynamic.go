@@ -1,9 +1,8 @@
 package oauth
 
 import (
-	"blizzard/models"
-	"blizzard/models/extra"
 	"blizzard/oauth"
+	"blizzard/server/http"
 	"blizzard/utils"
 	"blizzard/utils/crypto"
 	"encoding/base64"
@@ -13,7 +12,7 @@ import (
 	"strings"
 )
 
-func CreateUrl(ctx *extra.Context) models.Response {
+func CreateUrl(ctx *http.Context) http.Response {
 	if prov, ok := oauth.Conf[ctx.Param("provider")]; ok {
 		// 0 is false, 1 is true
 		remember := 0

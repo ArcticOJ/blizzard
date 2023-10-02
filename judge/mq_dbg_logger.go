@@ -15,5 +15,5 @@ func init() {
 type DbgLogger struct{}
 
 func (DbgLogger) Printf(format string, v ...interface{}) {
-	logger.Logger.Debug().Msgf(format, v)
+	logger.Blizzard.Debug().Msgf(format, v)
 }

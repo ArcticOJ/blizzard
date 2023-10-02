@@ -155,13 +155,13 @@ func (o *Observer) RecoverResults() {
 				o.mqChan.QueueDelete(_r.Destination, true, false, true)
 			} else {
 				if _e := o.Consume(uint32(_id.(float64)), _r.Destination); e != nil {
-					logger.Logger.Error().Err(_e).Msgf("could not recover results for submission '%v'", _id)
+					logger.Blizzard.Error().Err(_e).Msgf("could not recover results for submission '%v'", _id)
 					continue
 				}
 			}
 		}
 	} else {
-		logger.Logger.Error().Err(e).Msg("failed to get available streams for results")
+		logger.Blizzard.Error().Err(e).Msg("failed to get available streams for results")
 	}
 }
 
@@ -288,7 +288,7 @@ func (o *Observer) Reconnect() {
 	for {
 		select {
 		case <-o.errChan:
-			logger.Logger.Debug().Msg("reconnect")
+			logger.Blizzard.Debug().Msg("reconnect")
 			o.Connect()
 		}
 	}

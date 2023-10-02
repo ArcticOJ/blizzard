@@ -3,8 +3,7 @@ package auth
 import (
 	"blizzard/db"
 	"blizzard/db/models/user"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 	"github.com/matthewhartstonge/argon2"
 	"strings"
 )
@@ -17,7 +16,7 @@ type loginRequest struct {
 
 // TODO: Validate req before processing
 
-func Login(ctx *extra.Context) models.Response {
+func Login(ctx *http.Context) http.Response {
 	var req loginRequest
 	if ctx.Bind(&req) != nil {
 		return ctx.Bad("Invalid credentials.")

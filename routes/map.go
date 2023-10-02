@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"blizzard/models/extra"
 	"blizzard/routes/auth"
 	"blizzard/routes/contests"
 	"blizzard/routes/oauth"
@@ -11,9 +10,10 @@ import (
 	"blizzard/routes/submissions"
 	"blizzard/routes/user"
 	"blizzard/routes/users"
+	"blizzard/server/http"
 )
 
-var Map = map[string]extra.RouteMap{
+var Map = map[string]http.RouteMap{
 	"/problems":    problems.Map,
 	"/posts":       posts.Map,
 	"/contests":    contests.Map,

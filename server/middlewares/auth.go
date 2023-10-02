@@ -3,15 +3,14 @@ package middlewares
 import (
 	"blizzard/db"
 	"blizzard/db/models/user"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 	"strings"
 )
 
-func invalidate(ctx *extra.Context, next echo.HandlerFunc) error {
+func invalidate(ctx *http.Context, next echo.HandlerFunc) error {
 	ctx.Set("user", nil)
 	ctx.DeleteCookie("session")
 	return next(ctx)
@@ -31,14 +30,14 @@ func Authentication(secret string) echo.MiddlewareFunc {
 					}
 				}
 			}
-			ctx := &extra.Context{
+			ctx := &http.Context{
 				Context: c,
 			}
 			jt, e := ctx.Cookie("session")
 			if e != nil {
 				return invalidate(ctx, next)
 			}
-			token, err := jwt.ParseWithClaims(jt.Value, &models.Session{}, func(token *jwt.Token) (interface{}, error) {
+			token, err := jwt.ParseWithClaims(jt.Value, &http.Session{}, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 				}
@@ -47,7 +46,7 @@ func Authentication(secret string) echo.MiddlewareFunc {
 			if err != nil {
 				return invalidate(ctx, next)
 			}
-			if session, ok := token.Claims.(*models.Session); ok && token.Valid {
+			if session, ok := token.Claims.(*http.Session); ok && token.Valid {
 				if ok, e := db.Database.NewSelect().Model((*user.User)(nil)).Where("id = ?", session.UUID).Exists(ctx.Request().Context()); ok && e == nil {
 					ctx.Set("user", session.UUID)
 				} else {

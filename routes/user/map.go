@@ -1,26 +1,23 @@
 package user
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{
+var Map = http.RouteMap{
 	// avoid conflict with other routes
 	"/info/:handle": {
-		Methods: []models.Method{models.Get},
+		Methods: []http.Method{http.Get},
 		Handler: Info,
 	},
 	"/": {
-		Methods: []models.Method{models.Get, models.Post},
+		Methods: []http.Method{http.Get, http.Post},
 		Handler: Index,
 	},
 	"/apiKey": {
-		Methods: []models.Method{models.Get, models.Patch},
+		Methods: []http.Method{http.Get, http.Patch},
 		Handler: ApiKey,
 	},
 	"/changeUsername": {
-		Methods: []models.Method{models.Post},
+		Methods: []http.Method{http.Post},
 		Handler: ChangeUsername,
 	},
 }

@@ -19,7 +19,7 @@ const (
 	Submission
 	User
 	Bucket
-	Judge
+	Session
 )
 
 func CreateClient(db DB, name string) (c *redis.Client) {

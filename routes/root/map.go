@@ -1,13 +1,10 @@
 package root
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{
+var Map = http.RouteMap{
 	"/status": {
-		Methods: []models.Method{models.Get},
+		Methods: []http.Method{http.Get},
 		Handler: Status,
 	},
 }

@@ -4,10 +4,9 @@ import (
 	"blizzard/db"
 	"blizzard/db/models/user"
 	"blizzard/logger/debug"
-	"blizzard/models"
-	"blizzard/models/extra"
 	"blizzard/oauth"
 	"blizzard/oauth/providers"
+	"blizzard/server/http"
 	"blizzard/utils"
 	"blizzard/utils/crypto"
 	"crypto/hmac"
@@ -23,7 +22,7 @@ type oauthValidationRequest struct {
 	State string `json:"state"`
 }
 
-func HandleLink(ctx *extra.Context, provider string, res *providers.UserInfo) models.Response {
+func HandleLink(ctx *http.Context, provider string, res *providers.UserInfo) http.Response {
 	uuid := ctx.GetUUID()
 	if _, e := db.Database.NewInsert().Model(&user.OAuthConnection{
 		UserID:   *uuid,
@@ -40,7 +39,7 @@ func HandleLink(ctx *extra.Context, provider string, res *providers.UserInfo) mo
 	return nil
 }
 
-func HandleLogin(ctx *extra.Context, provider string, res *providers.UserInfo, state []string) models.Response {
+func HandleLogin(ctx *http.Context, provider string, res *providers.UserInfo, state []string) http.Response {
 	var c []user.OAuthConnection
 	if e := db.Database.NewSelect().
 		Model(&c).
@@ -58,7 +57,7 @@ func HandleLogin(ctx *extra.Context, provider string, res *providers.UserInfo, s
 	return nil
 }
 
-func Validate(ctx *extra.Context) models.Response {
+func Validate(ctx *http.Context) http.Response {
 	name := ctx.Param("provider")
 	if prov, ok := oauth.Conf[name]; ok {
 		var body oauthValidationRequest

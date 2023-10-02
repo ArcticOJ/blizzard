@@ -1,4 +1,4 @@
-package models
+package http
 
 type Response interface {
 	StatusCode() int

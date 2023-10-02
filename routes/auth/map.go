@@ -1,21 +1,18 @@
 package auth
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{
+var Map = http.RouteMap{
 	"/login": {
-		Methods: []models.Method{models.Post},
+		Methods: []http.Method{http.Post},
 		Handler: Login,
 	},
 	"/register": {
-		Methods: []models.Method{models.Post},
+		Methods: []http.Method{http.Post},
 		Handler: Register,
 	},
 	"/logout": {
-		Methods: []models.Method{models.Get},
+		Methods: []http.Method{http.Get},
 		Handler: Logout,
 	},
 }

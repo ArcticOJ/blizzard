@@ -3,8 +3,7 @@ package user
 import (
 	"blizzard/db"
 	"blizzard/db/models/user"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 	"blizzard/utils"
 	"encoding/base64"
 	"github.com/labstack/echo/v4"
@@ -12,12 +11,12 @@ import (
 	"time"
 )
 
-func ApiKey(ctx *extra.Context) models.Response {
+func ApiKey(ctx *http.Context) http.Response {
 	if ctx.RequireAuth() {
 		return nil
 	}
 	switch ctx.Method() {
-	case models.Get:
+	case http.Get:
 		var apiKey string
 		uuid := ctx.GetUUID()
 		if db.Database.NewSelect().Model(&user.User{ID: *uuid}).Column("id").WherePK().Column("api_key").Scan(ctx.Request().Context(), apiKey) != nil {
@@ -26,7 +25,7 @@ func ApiKey(ctx *extra.Context) models.Response {
 		return ctx.Respond(echo.Map{
 			"apiKey": apiKey,
 		})
-	case models.Patch:
+	case http.Patch:
 		uuid := ctx.GetUUID()
 		now := base64.RawStdEncoding.EncodeToString([]byte(strconv.FormatInt(time.Now().UTC().Unix(), 10)))
 		hash := utils.Rand(10, "")

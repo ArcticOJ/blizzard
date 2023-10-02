@@ -4,13 +4,12 @@ import (
 	"blizzard/db"
 	"blizzard/db/models/user"
 	"blizzard/logger/debug"
-	"blizzard/models"
-	"blizzard/models/extra"
 	"blizzard/oauth"
+	"blizzard/server/http"
 	"blizzard/utils"
 )
 
-func Unlink(ctx *extra.Context) models.Response {
+func Unlink(ctx *http.Context) http.Response {
 	if ctx.RequireAuth() {
 		return nil
 	}

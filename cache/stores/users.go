@@ -75,7 +75,7 @@ func (c *UserStore) load(id uuid.UUID, handle string) (u *user.User, _id uuid.UU
 		_id = u.ID
 		handle = u.Handle
 		if e := c.c.Set(ctx, fmt.Sprintf(defaultHandleToIdResolver, handle), u.ID.String(), time.Hour*6).Err(); e != nil {
-			logger.Logger.Error().Err(e).Str("id", id.String()).Str("handle", handle).Msgf("could not bind handle to id")
+			logger.Blizzard.Error().Err(e).Str("id", id.String()).Str("handle", handle).Msgf("could not bind handle to id")
 		}
 	}
 	return

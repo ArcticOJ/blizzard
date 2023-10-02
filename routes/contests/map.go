@@ -1,7 +1,5 @@
 package contests
 
-import (
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{}
+var Map = http.RouteMap{}

@@ -1,17 +1,17 @@
-package http
+package server
 
 import (
 	"blizzard/config"
-	"blizzard/models/extra"
 	"blizzard/routes"
-	"blizzard/server/http/middlewares"
+	"blizzard/server/http"
+	"blizzard/server/middlewares"
 	"github.com/labstack/echo/v4"
-	"net/http"
+	nethttp "net/http"
 )
 
-func createHandler(handler extra.Handler) echo.HandlerFunc {
+func createHandler(handler http.Handler) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		ctx := &extra.Context{
+		ctx := &http.Context{
 			Context: c,
 		}
 		res := handler(ctx)
@@ -19,7 +19,7 @@ func createHandler(handler extra.Handler) echo.HandlerFunc {
 			return nil
 		}
 		if res == nil {
-			return ctx.NoContent(http.StatusNoContent)
+			return ctx.NoContent(nethttp.StatusNoContent)
 		} else {
 			return ctx.CommitResponse(res)
 		}

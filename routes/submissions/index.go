@@ -3,11 +3,10 @@ package submissions
 import (
 	"blizzard/db"
 	"blizzard/db/models/contest"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 )
 
-func Submissions(ctx *extra.Context) models.Response {
+func Submissions(ctx *http.Context) http.Response {
 	var submissions []contest.Submission
 	if db.Database.NewSelect().Model(&submissions).Scan(ctx.Request().Context()) != nil {
 		return ctx.InternalServerError("Could not fetch submissions.")

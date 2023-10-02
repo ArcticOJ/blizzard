@@ -1,10 +1,9 @@
-package extra
+package http
 
 import (
 	"blizzard/config"
 	"blizzard/db"
 	"blizzard/db/models/user"
-	"blizzard/models"
 	"crypto/md5"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
@@ -19,58 +18,58 @@ type Context struct {
 	echo.Context
 }
 
-func (ctx Context) Err(code int, message string, context ...interface{}) models.Response {
+func (ctx Context) Err(code int, message string, context ...interface{}) Response {
 	var c interface{} = context
 	if len(context) == 0 {
 		c = nil
 	} else if len(context) == 1 {
 		c = context[0]
 	}
-	return &models.Error{Code: code, Message: message, Context: c}
+	return &Error{Code: code, Message: message, Context: c}
 }
 
-func (ctx Context) Respond(data interface{}) models.Response {
-	return &models.JsonResponse{Code: 200, Content: data}
+func (ctx Context) Respond(data interface{}) Response {
+	return &JsonResponse{Code: 200, Content: data}
 }
 
-func (ctx Context) Method() models.Method {
-	return models.MethodFromString(ctx.Request().Method)
+func (ctx Context) Method() Method {
+	return MethodFromString(ctx.Request().Method)
 }
 
-func (ctx Context) Arr(arr ...interface{}) models.Response {
+func (ctx Context) Arr(arr ...interface{}) Response {
 	return ctx.Respond(arr)
 }
 
-func (ctx Context) StreamResponse() *models.ResponseStream {
+func (ctx Context) StreamResponse() *ResponseStream {
 	r := ctx.Response()
 	h := r.Header()
 	h.Set("Transfer-Encoding", "chunked")
 	h.Set("Connection", "keep-alive")
 	r.WriteHeader(http.StatusOK)
-	return models.NewStream(r)
+	return NewStream(r)
 }
 
-func (ctx Context) Bad(message string, context ...interface{}) models.Response {
+func (ctx Context) Bad(message string, context ...interface{}) Response {
 	return ctx.Err(400, message, context...)
 }
 
-func (ctx Context) Unauthorized(context ...interface{}) models.Response {
+func (ctx Context) Unauthorized(context ...interface{}) Response {
 	return ctx.Err(401, "Unauthorized.", context...)
 }
 
-func (ctx Context) Forbid(message string, context ...interface{}) models.Response {
+func (ctx Context) Forbid(message string, context ...interface{}) Response {
 	return ctx.Err(403, message, context...)
 }
 
-func (ctx Context) NotFound(message string, context ...interface{}) models.Response {
+func (ctx Context) NotFound(message string, context ...interface{}) Response {
 	return ctx.Err(404, message, context...)
 }
 
-func (ctx Context) InternalServerError(message string, context ...interface{}) models.Response {
+func (ctx Context) InternalServerError(message string, context ...interface{}) Response {
 	return ctx.Err(500, message, context...)
 }
 
-func (ctx Context) Success() models.Response {
+func (ctx Context) Success() Response {
 	return ctx.Respond(echo.Map{
 		"success": true,
 	})
@@ -136,15 +135,15 @@ func (ctx Context) DeleteCookie(name string) {
 	ctx.SetCookie(cookie)
 }
 
-func (ctx Context) CommitResponse(res models.Response) error {
+func (ctx Context) CommitResponse(res Response) error {
 	return ctx.JSON(res.StatusCode(), res.Body())
 }
 
-func (ctx Context) Authenticate(uuid uuid.UUID, remember bool) models.Response {
+func (ctx Context) Authenticate(uuid uuid.UUID, remember bool) Response {
 	key := []byte(config.Config.PrivateKey)
 	now := time.Now()
 	lifespan := now.AddDate(0, 1, 0)
-	ss := &models.Session{
+	ss := &Session{
 		UUID: uuid,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(lifespan),

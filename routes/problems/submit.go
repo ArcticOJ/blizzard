@@ -9,8 +9,7 @@ import (
 	"blizzard/db/models/contest"
 	"blizzard/judge"
 	"blizzard/logger"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 	"blizzard/storage"
 	"context"
 	"errors"
@@ -66,7 +65,7 @@ func createSubmission(ctx context.Context, userId uuid.UUID, problem, language s
 
 // TODO: check availability of judges before judging
 
-func Submit(ctx *extra.Context) models.Response {
+func Submit(ctx *http.Context) http.Response {
 	if ctx.RequireAuth() {
 		return nil
 	}
@@ -75,7 +74,7 @@ func Submit(ctx *extra.Context) models.Response {
 		return ctx.Bad("No code.")
 	}
 	lang := ctx.FormValue("language")
-	logger.Logger.Debug().Str("lang", lang).Send()
+	logger.Blizzard.Debug().Str("lang", lang).Send()
 	id := ctx.Param("problem")
 	var problem contest.Problem
 	if _, ok := core.LanguageMatrix[lang]; !ok {

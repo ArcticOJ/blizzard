@@ -2,12 +2,11 @@ package submissions
 
 import (
 	"blizzard/cache/stores"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 	"strconv"
 )
 
-func Submission(ctx *extra.Context) models.Response {
+func Submission(ctx *http.Context) http.Response {
 	id := ctx.Param("submission")
 	_id, e := strconv.ParseUint(id, 10, 32)
 	if e != nil {

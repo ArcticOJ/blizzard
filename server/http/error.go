@@ -1,4 +1,4 @@
-package models
+package http
 
 type Error struct {
 	Code    int         `json:"code"`

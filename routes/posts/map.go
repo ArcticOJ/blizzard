@@ -1,18 +1,15 @@
 package posts
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-var Map = extra.RouteMap{
+var Map = http.RouteMap{
 	"/": {
-		Methods: []models.Method{models.Get, models.Post},
+		Methods: []http.Method{http.Get, http.Post},
 		Handler: Index,
 	},
 	"/:id": {
-		Methods: []models.Method{models.Get, models.Patch, models.Delete},
-		Handler: func(ctx *extra.Context) models.Response {
+		Methods: []http.Method{http.Get, http.Patch, http.Delete},
+		Handler: func(ctx *http.Context) http.Response {
 			return nil
 		},
 	},

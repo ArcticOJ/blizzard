@@ -2,15 +2,14 @@ package submissions
 
 import (
 	"blizzard/judge"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 	"strconv"
 )
 
 // TODO: broadcast cancel request to all judges
 // TODO: add authorization
 
-func CancelSubmission(ctx *extra.Context) models.Response {
+func CancelSubmission(ctx *http.Context) http.Response {
 	id, e := strconv.ParseUint(ctx.Param("submission"), 10, 32)
 	if e != nil {
 		return ctx.Bad("Invalid ID.")

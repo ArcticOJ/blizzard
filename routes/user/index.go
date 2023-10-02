@@ -1,11 +1,8 @@
 package user
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-func Index(ctx *extra.Context) models.Response {
+func Index(ctx *http.Context) http.Response {
 	// TODO: delete this route
 	if ctx.RequireAuth() {
 		return nil

@@ -1,4 +1,4 @@
-package models
+package http
 
 import (
 	"github.com/golang-jwt/jwt/v4"

@@ -1,10 +1,7 @@
 package user
 
-import (
-	"blizzard/models"
-	"blizzard/models/extra"
-)
+import "blizzard/server/http"
 
-func ChangeUsername(ctx *extra.Context) models.Response {
+func ChangeUsername(ctx *http.Context) http.Response {
 	return nil
 }

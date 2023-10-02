@@ -4,8 +4,7 @@ import (
 	"blizzard/core"
 	"blizzard/db"
 	"blizzard/db/models/user"
-	"blizzard/models"
-	"blizzard/models/extra"
+	"blizzard/server/http"
 	"blizzard/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -24,7 +23,7 @@ var blacklistedHandles = []string{"edit"}
 
 // TODO: Validate req before processing
 
-func Register(ctx *extra.Context) models.Response {
+func Register(ctx *http.Context) http.Response {
 	var req registerRequest
 	if ctx.Bind(&req) != nil {
 		return ctx.Bad("Malformed request payload.")

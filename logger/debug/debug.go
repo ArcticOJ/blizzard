@@ -7,6 +7,6 @@ import (
 
 func Dump(obj ...interface{}) {
 	if config.Config.Debug {
-		logger.Logger.Debug().Interface("dump", obj).Msg("debug")
+		logger.Blizzard.Debug().Interface("dump", obj).Msg("debug")
 	}
 }

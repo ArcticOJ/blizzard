@@ -4,9 +4,8 @@ import (
 	"blizzard/db"
 	"blizzard/db/models/user"
 	"blizzard/logger/debug"
-	"blizzard/models"
-	"blizzard/models/extra"
 	"blizzard/oauth"
+	"blizzard/server/http"
 	"github.com/labstack/echo/v4"
 )
 
@@ -15,7 +14,7 @@ type connection struct {
 	Username string `json:"username"`
 }
 
-func Index(ctx *extra.Context) models.Response {
+func Index(ctx *http.Context) http.Response {
 	uuid := ctx.GetUUID()
 	r := echo.Map{
 		"providers": oauth.EnabledProviders,
