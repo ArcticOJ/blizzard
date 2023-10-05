@@ -1,8 +1,8 @@
 package jobs
 
 import (
+	"blizzard/cache/stores"
 	"blizzard/config"
-	"blizzard/judge"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,9 +30,9 @@ type (
 		} `json:"items"`
 	}
 	binding struct {
-		RoutingKey string `json:"routing_key"`
-		Arguments  struct {
-			Name      string
+		RoutingKey  string `json:"routing_key"`
+		Destination string `json:"destination"`
+		Arguments   struct {
 			Arguments string
 			Compiler  string
 			Version   string
@@ -76,50 +76,47 @@ func getBindings(ctx context.Context) []binding {
 	return res
 }
 
-func groupBindings(b []binding) (m map[string][]judge.Runtime) {
+func groupBindings(b []binding) (m map[string][]stores.JudgeRuntime, runtimes []interface{}) {
 	if len(b) == 0 {
-		return nil
+		return nil, nil
 	}
-	m = make(map[string][]judge.Runtime)
+	m = make(map[string][]stores.JudgeRuntime)
 	for _, b2 := range b {
-		m[b2.Arguments.Name] = append(m[b2.Arguments.Name], judge.Runtime{
+		runtimes = append(runtimes, b2.RoutingKey)
+		m[b2.Destination] = append(m[b2.Destination], stores.JudgeRuntime{
 			ID:        b2.RoutingKey,
 			Compiler:  b2.Arguments.Compiler,
 			Arguments: b2.Arguments.Arguments,
 			Version:   b2.Arguments.Version,
 		})
 	}
-	return m
+	return
 }
 
 func UpdateJudgeStatus(ctx context.Context) {
-	judge.LockStatus()
-	defer judge.UnlockStatus()
-	for name := range judge.Status {
-		judge.Status[name] = new(judge.Judge)
-	}
+	status := make(map[string]stores.JudgeStatus)
 	b := getBindings(ctx)
 	q := getQueues(ctx)
+	var judgeList []interface{}
 	if q == nil {
 		return
 	}
+	g, rts := groupBindings(b)
 	for _, x := range q.Items {
-		judge.Status[x.Arguments.Name] = &judge.Judge{
-			Alive:   true,
-			Version: x.Arguments.Version,
-			Info: &judge.Info{
-				Memory:      x.Arguments.Memory,
-				OS:          x.Arguments.OS,
-				Parallelism: x.Arguments.Parallelism,
-				BootedSince: x.Arguments.BootedSince,
-			},
-			Runtimes: nil,
+		judgeList = append(judgeList, x.Arguments.Name)
+		status[x.Arguments.Name] = stores.JudgeStatus{
+			Version:     x.Arguments.Version,
+			Memory:      x.Arguments.Memory,
+			OS:          x.Arguments.OS,
+			Parallelism: x.Arguments.Parallelism,
+			BootedSince: x.Arguments.BootedSince,
+			Runtimes:    g[x.Name],
 		}
 	}
-	g := groupBindings(b)
-	for name, runtime := range g {
-		if j, ok := judge.Status[name]; ok {
-			j.Runtimes = runtime
-		}
+
+	if buf, e := json.Marshal(status); e == nil {
+		stores.Judge.UpdateJudgeStatus(ctx, judgeList, string(buf), rts)
+		return
 	}
+	stores.Judge.UpdateJudgeStatus(ctx, judgeList, "{}", rts)
 }

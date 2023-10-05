@@ -15,7 +15,7 @@ var RateLimiter *RateLimitStore
 const defaultBucketKey = "blizzard::bucket[%s]"
 
 type RateLimitStore struct {
-	c *redis.Client
+	c redis.UniversalClient
 }
 
 func init() {

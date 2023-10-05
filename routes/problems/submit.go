@@ -3,6 +3,7 @@
 package problems
 
 import (
+	"blizzard/cache/stores"
 	"blizzard/core"
 	"blizzard/core/errs"
 	"blizzard/db"
@@ -91,10 +92,11 @@ func Submit(ctx *http.Context) http.Response {
 	if db.Database.NewSelect().Model(&problem).Where("id = ?", id).Scan(ctx.Request().Context()) != nil {
 		return ctx.NotFound("Problem not found.")
 	}
-	if !judge.ResponseObserver.CheckAvailability(lang, ctx.Request().Context()) {
+	// might not be accurate
+	if !stores.Judge.IsRuntimeAllowed(ctx.Request().Context(), lang) {
 		return ctx.InternalServerError("No judge server is available to handle this submission.")
 	}
-	dbSub, rollback, commit := createSubmission(ctx.Request().Context(), *ctx.GetUUID(), problem.ID, lang, ext)
+	dbSub, rollback, commit := createSubmission(ctx.Request().Context(), ctx.GetUUID(), problem.ID, lang, ext)
 	if dbSub == nil {
 		return ctx.Bad("Failed to create submission!")
 	}
@@ -104,9 +106,9 @@ func Submit(ctx *http.Context) http.Response {
 		return ctx.Bad("Could not write code to file!")
 	}
 	res := make(chan interface{}, 1)
-	s := judge.ResponseObserver.Observe(sub.ID, res)
-	if judge.ResponseObserver.Enqueue(sub, *dbSub.SubmittedAt) != nil {
-		judge.ResponseObserver.DestroyObserver(sub.ID)
+	s := judge.ResponseWorker.Observe(sub.ID, res)
+	if judge.ResponseWorker.Enqueue(sub, *dbSub.SubmittedAt) != nil {
+		judge.ResponseWorker.DestroyObserver(sub.ID)
 		rollback()
 		if errors.Is(e, errs.JudgeNotAvailable) {
 			return ctx.InternalServerError("No judge is available for this language.")
@@ -117,7 +119,7 @@ func Submit(ctx *http.Context) http.Response {
 	stream := ctx.StreamResponse()
 	go func() {
 		<-ctx.Request().Context().Done()
-		judge.ResponseObserver.StopObserve(s)
+		judge.ResponseWorker.StopObserving(s)
 	}()
 	for r := range res {
 		stream.Write(r)

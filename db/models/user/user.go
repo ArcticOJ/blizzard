@@ -7,27 +7,26 @@ import (
 
 type (
 	MinimalUser struct {
-		ID           uuid.UUID `json:"id,omitempty"`
-		DisplayName  string    `json:"displayName,omitempty"`
-		Handle       string    `json:"handle,omitempty"`
-		Avatar       string    `json:"avatar,omitempty"`
-		Organization string    `json:"organization,omitempty"`
-		TopRole      *Role     `json:"topRole"`
-		Rating       uint16    `json:"rating"`
+		ID           string      `json:"id,omitempty"`
+		DisplayName  string      `json:"displayName,omitempty"`
+		Handle       string      `json:"handle,omitempty"`
+		Avatar       string      `json:"avatar,omitempty"`
+		Organization string      `json:"organization,omitempty"`
+		TopRole      interface{} `json:"topRole,omitempty"`
+		Rating       uint16      `json:"rating"`
 	}
 	User struct {
-		ID                 uuid.UUID  `bun:",pk,unique,type:uuid,default:gen_random_uuid()" json:"id,omitempty"`
-		DisplayName        string     `json:"displayName,omitempty"`
-		Handle             string     `bun:",notnull,unique" json:"handle,omitempty"`
-		Email              string     `bun:",notnull,unique" json:"email,omitempty"`
-		EmailVerified      bool       `bun:",default:false" json:"emailVerified,omitempty"`
-		Avatar             string     `bun:"-" json:"avatar,omitempty"`
-		Password           string     `bun:",notnull" json:"-"`
-		Organization       string     `json:"organization,omitempty"`
-		RegisteredAt       *time.Time `bun:",nullzero,notnull,default:'now()'" json:"registeredAt,omitempty"`
-		ApiKey             string
+		ID                 uuid.UUID         `bun:",pk,unique,type:uuid,default:gen_random_uuid()" json:"id,omitempty"`
+		DisplayName        string            `json:"displayName,omitempty"`
+		Handle             string            `bun:",notnull,unique" json:"handle,omitempty"`
+		Email              string            `bun:",notnull,unique" json:"-"`
+		EmailVerified      bool              `bun:",default:false" json:"emailVerified,omitempty"`
+		Avatar             string            `bun:"-" json:"avatar,omitempty"`
+		Password           string            `bun:",notnull" json:"-"`
+		Organization       string            `json:"organization,omitempty"`
+		RegisteredAt       *time.Time        `bun:",nullzero,notnull,default:'now()'" json:"registeredAt,omitempty"`
+		ApiKey             string            `json:"-"`
 		Connections        []OAuthConnection `bun:"rel:has-many,join:id=user_id" json:"connections,omitempty"`
-		TopRole            *Role             `bun:"-" json:"topRole"`
 		Roles              []Role            `bun:"m2m:user_to_roles,join:User=Role" json:"roles,omitempty"`
 		DeletedAt          *time.Time        `bun:",soft_delete,nullzero" json:"deletedAt,omitempty"`
 		Rating             uint16            `bun:",default:0" json:"rating"`

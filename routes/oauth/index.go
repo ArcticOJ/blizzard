@@ -6,6 +6,7 @@ import (
 	"blizzard/logger/debug"
 	"blizzard/oauth"
 	"blizzard/server/http"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -15,14 +16,14 @@ type connection struct {
 }
 
 func Index(ctx *http.Context) http.Response {
-	uuid := ctx.GetUUID()
+	uid := ctx.GetUUID()
 	r := echo.Map{
 		"providers": oauth.EnabledProviders,
 	}
-	if uuid != nil {
+	if uid != uuid.Nil {
 		var c []user.OAuthConnection
 		m := make(map[string]connection)
-		debug.Dump(db.Database.NewSelect().Model(&c).ExcludeColumn("user_id").Where("user_id = ?", uuid).Scan(ctx.Request().Context()))
+		debug.Dump(db.Database.NewSelect().Model(&c).ExcludeColumn("user_id").Where("user_id = ?", uid).Scan(ctx.Request().Context()))
 		debug.Dump(c)
 		for _, p := range c {
 			m[p.Provider] = connection{

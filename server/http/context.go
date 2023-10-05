@@ -1,15 +1,9 @@
 package http
 
 import (
-	"blizzard/config"
-	"blizzard/db"
-	"blizzard/db/models/user"
-	"crypto/md5"
-	"github.com/golang-jwt/jwt/v4"
+	"blizzard/server/session"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/tmthrgd/go-hex"
-	"github.com/uptrace/bun"
 	"net/http"
 	"time"
 )
@@ -75,39 +69,16 @@ func (ctx Context) Success() Response {
 	})
 }
 
-func (ctx Context) GetUUID() *uuid.UUID {
+func (ctx Context) GetUUID() uuid.UUID {
 	id := ctx.Get("user")
 	if id == nil {
-		return nil
+		return uuid.Nil
 	}
 	if uid, ok := id.(uuid.UUID); !ok {
-		return nil
+		return uuid.Nil
 	} else {
-		return &uid
+		return uid
 	}
-}
-
-func (ctx Context) GetUser() *user.User {
-	return ctx.GetDetailedUser(func(query *bun.SelectQuery) *bun.SelectQuery {
-		return query.Column("id", "handle", "display_name", "email")
-	})
-}
-
-func (ctx Context) GetDetailedUser(q func(query *bun.SelectQuery) *bun.SelectQuery) *user.User {
-	id := ctx.GetUUID()
-	if id == nil {
-		return nil
-	}
-	var usr user.User
-	query := db.Database.NewSelect().Model(&usr).Where("id = ?", id)
-	if q != nil {
-		query = q(query)
-	}
-	e := query.Scan(ctx.Request().Context())
-	if e != nil {
-		return nil
-	}
-	return &usr
 }
 
 func (ctx Context) PutCookie(name string, value string, exp time.Time, sessionOnly bool) {
@@ -139,36 +110,20 @@ func (ctx Context) CommitResponse(res Response) error {
 	return ctx.JSON(res.StatusCode(), res.Body())
 }
 
-func (ctx Context) Authenticate(uuid uuid.UUID, remember bool) Response {
-	key := []byte(config.Config.PrivateKey)
-	now := time.Now()
-	lifespan := now.AddDate(0, 1, 0)
-	ss := &Session{
-		UUID: uuid,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(lifespan),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			Issuer:    "Arctic Judge Platform",
-		},
+func (ctx Context) Authenticate(uid uuid.UUID, remember bool) Response {
+	lifespan := time.Hour * 24
+	if remember {
+		lifespan *= 30
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ss)
-	signedToken, e := token.SignedString(key)
-	if e != nil {
-		return ctx.InternalServerError("Could not create a new session.")
+	if k, validUntil := session.Encrypt(lifespan, uid); k != "" {
+		ctx.PutCookie("session", k, validUntil, !remember)
+		return ctx.Success()
 	}
-	ctx.PutCookie("session", signedToken, lifespan, !remember)
-	return ctx.Success()
-}
-
-func (ctx Context) AddAvatar(usr *user.User) {
-	h := md5.Sum([]byte(usr.Email))
-	usr.Avatar = hex.EncodeToString(h[:])
-	usr.Email = ""
+	return ctx.InternalServerError("Could not create a new session.")
 }
 
 func (ctx Context) RequireAuth() bool {
-	authenticated := ctx.GetUUID() != nil
+	authenticated := ctx.GetUUID() != uuid.Nil
 	if !authenticated {
 		ctx.CommitResponse(ctx.Unauthorized())
 	}

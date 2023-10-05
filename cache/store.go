@@ -16,17 +16,17 @@ type (
 
 const (
 	Result DB = iota + 1
-	Submission
 	User
 	Bucket
-	Session
+	Submission
+	Judge
 )
 
-func CreateClient(db DB, name string) (c *redis.Client) {
+func CreateClient(db DB, name string) (c redis.UniversalClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	c = redis.NewClient(&redis.Options{
-		Addr: net.JoinHostPort(config.Config.Redis.Host, fmt.Sprint(config.Config.Redis.Port)),
+		Addr: net.JoinHostPort(config.Config.Dragonfly.Host, fmt.Sprint(config.Config.Dragonfly.Port)),
 		DB:   int(db),
 	})
 	if config.Config.Debug {

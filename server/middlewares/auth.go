@@ -1,11 +1,12 @@
 package middlewares
 
 import (
+	"blizzard/cache/stores"
 	"blizzard/db"
 	"blizzard/db/models/user"
 	"blizzard/server/http"
-	"fmt"
-	"github.com/golang-jwt/jwt/v4"
+	"blizzard/server/session"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"strings"
 )
@@ -16,8 +17,7 @@ func invalidate(ctx *http.Context, next echo.HandlerFunc) error {
 	return next(ctx)
 }
 
-func Authentication(secret string) echo.MiddlewareFunc {
-	key := []byte(secret)
+func Authentication() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
@@ -33,27 +33,12 @@ func Authentication(secret string) echo.MiddlewareFunc {
 			ctx := &http.Context{
 				Context: c,
 			}
-			jt, e := ctx.Cookie("session")
-			if e != nil {
+			cookie, e := ctx.Cookie("session")
+			if e != nil || cookie.Value == "" {
 				return invalidate(ctx, next)
 			}
-			token, err := jwt.ParseWithClaims(jt.Value, &http.Session{}, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-				}
-				return key, nil
-			})
-			if err != nil {
-				return invalidate(ctx, next)
-			}
-			if session, ok := token.Claims.(*http.Session); ok && token.Valid {
-				if ok, e := db.Database.NewSelect().Model((*user.User)(nil)).Where("id = ?", session.UUID).Exists(ctx.Request().Context()); ok && e == nil {
-					ctx.Set("user", session.UUID)
-				} else {
-					return invalidate(ctx, next)
-				}
-			} else {
-				return invalidate(ctx, next)
+			if uid := session.Decrypt(cookie.Value); uid != uuid.Nil && stores.Users.Exists(ctx.Request().Context(), uid) {
+				ctx.Set("user", uid)
 			}
 			return next(c)
 		}

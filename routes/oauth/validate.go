@@ -25,7 +25,7 @@ type oauthValidationRequest struct {
 func HandleLink(ctx *http.Context, provider string, res *providers.UserInfo) http.Response {
 	uuid := ctx.GetUUID()
 	if _, e := db.Database.NewInsert().Model(&user.OAuthConnection{
-		UserID:   *uuid,
+		UserID:   uuid,
 		Username: res.Username,
 		ID:       res.ID,
 		Provider: provider,

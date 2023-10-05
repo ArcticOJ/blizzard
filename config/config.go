@@ -14,12 +14,12 @@ type (
 		Debug      bool   `yaml:"-"`
 		EnableCORS bool   `json:"enableCors"`
 		RateLimit  uint32 `yaml:"rateLimit"`
-		Database   *DatabaseConfig
-		Storage    *StorageConfig
+		Database   DatabaseConfig
+		Storage    StorageConfig
 		Discord    *DiscordConfig
-		OAuth      map[string]*OAuthProvider
-		Redis      *Address
-		RabbitMQ   *RabbitMQConfig
+		OAuth      map[string]OAuthProvider
+		Dragonfly  Address
+		RabbitMQ   RabbitMQConfig
 	}
 
 	DiscordConfig struct {
@@ -42,8 +42,8 @@ type (
 	}
 
 	OAuthProvider struct {
-		ClientID     string
-		ClientSecret string
+		ClientID     string `yaml:"clientId"`
+		ClientSecret string `yaml:"clientSecret"`
 	}
 
 	StorageConfig struct {

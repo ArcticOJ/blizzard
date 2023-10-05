@@ -46,7 +46,7 @@ func Panic(e error, msg string, args ...interface{}) {
 	}
 	pc, _, _, ok := runtime.Caller(1)
 	details := runtime.FuncForPC(pc)
-	l := Global.Fatal().Stack().Err(e)
+	l := Global.Panic().Stack().Err(e)
 	if ok && details != nil {
 		file, line := details.FileLine(pc)
 		l = l.Str("from", details.Name()).Str("line", fmt.Sprintf("%s:%d", file, line))

@@ -19,7 +19,7 @@ func ApiKey(ctx *http.Context) http.Response {
 	case http.Get:
 		var apiKey string
 		uuid := ctx.GetUUID()
-		if db.Database.NewSelect().Model(&user.User{ID: *uuid}).Column("id").WherePK().Column("api_key").Scan(ctx.Request().Context(), apiKey) != nil {
+		if db.Database.NewSelect().Model(&user.User{ID: uuid}).Column("id").WherePK().Column("api_key").Scan(ctx.Request().Context(), apiKey) != nil {
 			apiKey = ""
 		}
 		return ctx.Respond(echo.Map{

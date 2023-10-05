@@ -26,10 +26,10 @@ import (
 	"time"
 )
 
-var ResponseObserver *Observer
+var ResponseWorker *Worker
 
 type (
-	Observer struct {
+	Worker struct {
 		c   *http.Client
 		s   *semaphore.Weighted
 		ctx context.Context
@@ -75,8 +75,8 @@ type (
 	}
 )
 
-func NewObserver(ctx context.Context) *Observer {
-	return &Observer{
+func NewObserver(ctx context.Context) *Worker {
+	return &Worker{
 		c: &http.Client{
 			Timeout: time.Second,
 		},
@@ -92,69 +92,45 @@ func NewObserver(ctx context.Context) *Observer {
 	}
 }
 
-func (o *Observer) CheckAvailability(language string, ctx context.Context) bool {
-	if o.s.Acquire(ctx, 1) != nil {
-		return false
-	}
-	defer o.s.Release(1)
-	conf := config.Config.RabbitMQ
-	req, e := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://%s:%d/api/exchanges/%s/submissions/bindings/source", conf.Host, conf.ManagerPort, url.PathEscape(conf.VHost)), nil)
-	if e != nil {
-		return false
-	}
-	req.SetBasicAuth(conf.Username, conf.Password)
-	if r, e := o.c.Do(req); e == nil {
-		var _r []rmqApiResponse
-		if json.NewDecoder(r.Body).Decode(&_r) != nil {
-			return false
-		}
-		return utils.ArrayFind(_r, func(response rmqApiResponse) bool {
-			return response.RoutingKey == language
-		})
-	}
-	return false
-}
-
-func (o *Observer) Connect() {
+func (w *Worker) Connect() {
 	var e error
-	if o.mqConn != nil {
-		o.mqConn.Close()
-		o.mqChan.Close()
+	if w.mqConn != nil {
+		w.mqConn.Close()
+		w.mqChan.Close()
 	}
 	conf := config.Config.RabbitMQ
-	o.mqConn, e = amqp.DialConfig(fmt.Sprintf("amqp://%s:%s@%s", conf.Username, conf.Password, net.JoinHostPort(conf.Host, fmt.Sprint(conf.Port))), amqp.Config{
+	w.mqConn, e = amqp.DialConfig(fmt.Sprintf("amqp://%s:%s@%s", conf.Username, conf.Password, net.JoinHostPort(conf.Host, fmt.Sprint(conf.Port))), amqp.Config{
 		Heartbeat: time.Second,
 		Vhost:     conf.VHost,
 	})
 	logger.Panic(e, "failed to establish a connection to rabbitmq")
-	o.mqChan, e = o.mqConn.Channel()
+	w.mqChan, e = w.mqConn.Channel()
 	logger.Panic(e, "failed to open a channel for queue")
-	logger.Panic(o.mqChan.ExchangeDeclare("submissions", "direct", true, false, false, false, amqp.Table{
+	logger.Panic(w.mqChan.ExchangeDeclare("submissions", "direct", true, false, false, false, amqp.Table{
 		"x-consumer-timeout": 3600000,
 	}), "failed to declare exchange for submissions")
-	logger.Panic(o.mqChan.Confirm(false), "could not put queue channel to confirm mode")
-	logger.Panic(o.mqChan.Qos(100, 0, false), "failed to set qos")
-	logger.Panic(o.mqChan.ExchangeDeclare("results", "fanout", true, false, false, false, nil), "could not declare exchange for results")
-	o.errChan = o.mqConn.NotifyClose(make(chan *amqp.Error, 1))
-	o.returnChan = o.mqChan.NotifyReturn(make(chan amqp.Return, 1))
-	o.RecoverResults()
+	logger.Panic(w.mqChan.Qos(100, 0, false), "failed to set qos")
+	logger.Panic(w.mqChan.ExchangeDeclare("results", "fanout", true, false, false, false, nil), "could not declare exchange for results")
+	w.errChan = w.mqConn.NotifyClose(make(chan *amqp.Error, 1))
+	w.returnChan = w.mqChan.NotifyReturn(make(chan amqp.Return, 1))
+	w.RecoverResults()
 }
 
-func (o *Observer) RecoverResults() {
+func (w *Worker) RecoverResults() {
 	conf := config.Config.RabbitMQ
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/exchanges/%s/results/bindings/source", conf.Host, conf.ManagerPort, url.PathEscape(conf.VHost)), nil)
 	req.SetBasicAuth(conf.Username, conf.Password)
-	if res, e := o.c.Do(req); e == nil {
+	if res, e := w.c.Do(req); e == nil {
 		var r []rmqApiResponse
 		if json.NewDecoder(res.Body).Decode(&r) != nil {
 			return
 		}
 		for _, _r := range r {
 			_id, ok := _r.Arguments["x-id"]
-			if !ok || !stores.Pending.IsPending(o.ctx, uint32(_id.(float64))) {
-				o.mqChan.QueueDelete(_r.Destination, true, false, true)
+			if !ok || !stores.Pending.IsPending(w.ctx, uint32(_id.(float64))) {
+				w.mqChan.QueueDelete(_r.Destination, true, false, true)
 			} else {
-				if _e := o.Consume(uint32(_id.(float64)), _r.Destination); e != nil {
+				if _e := w.Consume(uint32(_id.(float64)), _r.Destination); e != nil {
 					logger.Blizzard.Error().Err(_e).Msgf("could not recover results for submission '%v'", _id)
 					continue
 				}
@@ -167,10 +143,10 @@ func (o *Observer) RecoverResults() {
 
 // TODO: implement auto reconnect
 
-func (o *Observer) CreateStream() {
+func (w *Worker) CreateStream() {
 	var e error
 	conf := config.Config.RabbitMQ
-	o.env, e = stream.NewEnvironment(
+	w.env, e = stream.NewEnvironment(
 		stream.NewEnvironmentOptions().
 			SetHost(conf.Host).
 			SetPort(int(conf.StreamPort)).
@@ -182,16 +158,16 @@ func (o *Observer) CreateStream() {
 	}
 }
 
-func (o *Observer) commitToDb(id uint32, res *contest.FinalResult) {
-	db.Database.RunInTx(o.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		if _, e := tx.NewUpdate().Model((*contest.Submission)(nil)).Where("id = ?", id).Set("result = ?", res).Returning("NULL").Exec(o.ctx); e != nil {
+func (w *Worker) commitToDb(id uint32, res *contest.FinalResult) {
+	db.Database.RunInTx(w.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, e := tx.NewUpdate().Model((*contest.Submission)(nil)).Where("id = ?", id).Set("result = ?", res).Returning("NULL").Exec(w.ctx); e != nil {
 			return e
 		}
 		return nil
 	})
 }
 
-func (o *Observer) Enqueue(sub *Submission, t time.Time) error {
+func (w *Worker) Enqueue(sub *Submission, t time.Time) error {
 	var e error
 	b, e := msgpack.Marshal(sub)
 	if e != nil {
@@ -199,27 +175,27 @@ func (o *Observer) Enqueue(sub *Submission, t time.Time) error {
 	}
 	timestamp := time.Now().UTC().UnixMilli()
 	name := fmt.Sprintf("%d_%d", sub.ID, timestamp)
-	if e = o.env.DeclareStream(name, &stream.StreamOptions{
+	if e = w.env.DeclareStream(name, &stream.StreamOptions{
 		MaxAge: time.Hour * 24,
 	}); e != nil {
 		return e
 	}
-	e = o.mqChan.QueueBind(name, "", "results", false, amqp.Table{
+	e = w.mqChan.QueueBind(name, "", "results", false, amqp.Table{
 		"x-id":        int64(sub.ID),
 		"x-timestamp": timestamp,
 		"x-capacity":  int(sub.TestCount + 1),
 	})
 	if e != nil {
-		o.env.DeleteStream(name)
+		w.env.DeleteStream(name)
 		return e
 	}
-	e = o.Consume(sub.ID, name)
+	e = w.Consume(sub.ID, name)
 	if e != nil {
-		o.env.DeleteStream(name)
+		w.env.DeleteStream(name)
 		return e
 	}
-	conf, e := o.mqChan.PublishWithDeferredConfirmWithContext(
-		o.ctx,
+	conf, e := w.mqChan.PublishWithDeferredConfirmWithContext(
+		w.ctx,
 		"submissions",
 		sub.Language,
 		true,
@@ -233,25 +209,25 @@ func (o *Observer) Enqueue(sub *Submission, t time.Time) error {
 			Body:          b,
 		})
 	if e != nil {
-		o.env.DeleteStream(name)
+		w.env.DeleteStream(name)
 	}
-	return stores.Pending.Set(o.ctx, sub.ID, conf.DeliveryTag, sub.TestCount, uint16(math.Ceil(float64(sub.Constraints.TimeLimit))))
+	return stores.Pending.Set(w.ctx, sub.ID, conf.DeliveryTag, sub.TestCount, uint16(math.Ceil(float64(sub.Constraints.TimeLimit))))
 
 }
 
-func (o *Observer) Cancel(ctx context.Context, id uint32) error {
+func (w *Worker) Cancel(ctx context.Context, id uint32) error {
 	if !stores.Pending.IsPending(ctx, id) {
 		return errors.New("no submission with matching ID")
 	}
 	if tag, ok := stores.Pending.Get(ctx, id); ok {
-		return o.mqChan.Reject(tag, false)
+		return w.mqChan.Reject(tag, false)
 	}
 	return errors.New("could not cancel specified submission")
 }
 
-func (o *Observer) Consume(id uint32, name string) error {
+func (w *Worker) Consume(id uint32, name string) error {
 	lastNonAcVerdict := contest.None
-	_, e := o.env.NewConsumer(name, func(ctx stream.ConsumerContext, msg *amqp2.Message) {
+	_, e := w.env.NewConsumer(name, func(ctx stream.ConsumerContext, msg *amqp2.Message) {
 		var r res
 		if msgpack.Unmarshal(msg.Data[0], &r) != nil {
 			return
@@ -263,9 +239,9 @@ func (o *Observer) Consume(id uint32, name string) error {
 				return
 			}
 			_r.LastNonACVerdict = lastNonAcVerdict
-			o.publish(id, _r, 0)
-			o.env.DeleteStream(name)
-			stores.Pending.Delete(o.ctx, id)
+			w.publish(id, _r, 0)
+			w.env.DeleteStream(name)
+			stores.Pending.Delete(w.ctx, id)
 		} else {
 			var _r CaseResult
 			if mapstructure.Decode(r.Body, &_r) != nil {
@@ -278,33 +254,32 @@ func (o *Observer) Consume(id uint32, name string) error {
 			if _ttl, _ok := r.Headers["ttl"].(int32); _ok && _ttl > 0 {
 				ttl = uint16(_ttl)
 			}
-			o.publish(id, _r, ttl)
+			w.publish(id, _r, ttl)
 		}
 	}, stream.NewConsumerOptions().SetOffset(stream.OffsetSpecification{}.First()).SetCRCCheck(false))
 	return e
 }
 
-func (o *Observer) Reconnect() {
+func (w *Worker) Reconnect() {
 	for {
 		select {
-		case <-o.errChan:
+		case <-w.errChan:
 			logger.Blizzard.Debug().Msg("reconnect")
-			o.Connect()
+			w.Connect()
 		}
 	}
 }
 
-func (o *Observer) Work() {
-	o.CreateStream()
-	o.Connect()
-	go o.Reconnect()
+func (w *Worker) Work() {
+	w.CreateStream()
+	w.Connect()
+	go w.Reconnect()
 	for {
 		select {
 		// on destroy
-		case id := <-o.dc:
-			fmt.Printf("destroying %d\n", id)
-			stores.Pending.Delete(o.ctx, id)
-			a, ok := o.sm[id]
+		case id := <-w.dc:
+			stores.Pending.Delete(w.ctx, id)
+			a, ok := w.sm[id]
 			if !ok {
 				continue
 			}
@@ -312,14 +287,14 @@ func (o *Observer) Work() {
 				close(a[i])
 				a[i] = nil
 			}
-			o.sm[id] = nil
-			delete(o.sm, id)
+			w.sm[id] = nil
+			delete(w.sm, id)
 		// on sub
-		case s := <-o.sc:
-			o.sm[s.id] = append(o.sm[s.id], s.c)
+		case s := <-w.sc:
+			w.sm[s.id] = append(w.sm[s.id], s.c)
 		// on unsub
-		case u := <-o.usc:
-			m, ok := o.sm[u.id]
+		case u := <-w.usc:
+			m, ok := w.sm[u.id]
 			if !ok {
 				continue
 			}
@@ -331,10 +306,10 @@ func (o *Observer) Work() {
 				}
 				return false
 			})
-			o.sm[u.id] = m
+			w.sm[u.id] = m
 		// on pub
-		case msg := <-o.pc:
-			a, ok := o.sm[msg.id]
+		case msg := <-w.pc:
+			a, ok := w.sm[msg.id]
 			isFinal := false
 			if !ok {
 				continue
@@ -352,7 +327,7 @@ func (o *Observer) Work() {
 			case FinalResult:
 				fr := resolveFinalResult(r)
 				d = fr
-				o.commitToDb(msg.id, fr)
+				w.commitToDb(msg.id, fr)
 				isFinal = true
 			}
 			if d != nil {
@@ -363,29 +338,29 @@ func (o *Observer) Work() {
 				}
 			}
 			if isFinal {
-				o.DestroyObserver(msg.id)
+				w.DestroyObserver(msg.id)
 			}
 		}
 	}
 }
 
-func (o *Observer) publish(id uint32, data interface{}, ttl uint16) {
-	o.pc <- result{id: id, data: data, ttl: ttl}
+func (w *Worker) publish(id uint32, data interface{}, ttl uint16) {
+	w.pc <- result{id: id, data: data, ttl: ttl}
 }
 
-func (o *Observer) DestroyObserver(id uint32) {
-	o.dc <- id
+func (w *Worker) DestroyObserver(id uint32) {
+	w.dc <- id
 }
 
-func (o *Observer) Observe(id uint32, c chan<- interface{}) (s Subscription) {
+func (w *Worker) Observe(id uint32, c chan<- interface{}) (s Subscription) {
 	s = Subscription{
 		id: id,
 		c:  c,
 	}
-	o.sc <- s
+	w.sc <- s
 	return
 }
 
-func (o *Observer) StopObserve(s Subscription) {
-	o.usc <- s
+func (w *Worker) StopObserving(s Subscription) {
+	w.usc <- s
 }

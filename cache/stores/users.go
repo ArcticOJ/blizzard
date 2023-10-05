@@ -5,21 +5,22 @@ import (
 	"blizzard/db"
 	"blizzard/db/models/user"
 	"blizzard/logger"
+	"blizzard/rejson"
 	"context"
-	"encoding/json"
+	"crypto/md5"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/nitishm/go-rejson/v4"
 	"github.com/redis/go-redis/v9"
+	"github.com/tmthrgd/go-hex"
 	"github.com/uptrace/bun"
+	"strings"
 	"time"
 )
 
 var Users *UserStore
 
 type UserStore struct {
-	c *redis.Client
-	j *rejson.Handler
+	j *rejson.ReJSON
 }
 
 const (
@@ -31,8 +32,7 @@ const (
 func init() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
-	Users = &UserStore{cache.CreateClient(cache.User, "users"), rejson.NewReJSONHandler()}
-	Users.j.SetGoRedisClient(Users.c)
+	Users = &UserStore{j: &rejson.ReJSON{Client: cache.CreateClient(cache.User, "users")}}
 	var ids []string
 	logger.Panic(db.Database.NewSelect().Model((*user.User)(nil)).Column("id").Scan(ctx, &ids), "failed to to query for users")
 	var m []redis.Z
@@ -42,20 +42,19 @@ func init() {
 			Member: id,
 		})
 	}
-	_, e := Users.c.TxPipelined(ctx, func(p redis.Pipeliner) error {
-		if e := p.Del(ctx, defaultUserListKey).Err(); e != nil {
-			return e
-		}
-		return p.ZAdd(ctx, defaultUserListKey, m...).Err()
+	_, e := Users.j.TxPipelined(ctx, func(p redis.Pipeliner) error {
+		p.Del(ctx, defaultUserListKey)
+		p.ZAdd(ctx, defaultUserListKey, m...)
+		return nil
 	})
 	logger.Panic(e, "failed to populate user cache")
 }
 
-func (c *UserStore) load(id uuid.UUID, handle string) (u *user.User, _id uuid.UUID) {
+func (s *UserStore) load(id uuid.UUID, handle string) (u *user.User) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 	u = new(user.User)
-	q := db.Database.NewSelect().Model(u)
+	q := db.Database.NewSelect().Model(u).ExcludeColumn("password", "api_key")
 	if id == uuid.Nil {
 		q = q.Where("handle = ?", handle)
 	} else {
@@ -66,59 +65,106 @@ func (c *UserStore) load(id uuid.UUID, handle string) (u *user.User, _id uuid.UU
 	}).Relation("Roles", func(query *bun.SelectQuery) *bun.SelectQuery {
 		return query.Order("priority ASC").Column("name", "icon", "color")
 	}).Scan(ctx); e != nil {
-		return nil, uuid.Nil
+		return nil
 	}
-	if len(u.Roles) > 0 {
-		u.TopRole = &u.Roles[0]
-	}
-	if u.ID != uuid.Nil {
-		_id = u.ID
-		handle = u.Handle
-		if e := c.c.Set(ctx, fmt.Sprintf(defaultHandleToIdResolver, handle), u.ID.String(), time.Hour*6).Err(); e != nil {
-			logger.Blizzard.Error().Err(e).Str("id", id.String()).Str("handle", handle).Msgf("could not bind handle to id")
-		}
+	if strings.TrimSpace(u.Email) != "" {
+		h := md5.Sum([]byte(u.Email))
+		u.Avatar = hex.EncodeToString(h[:])
 	}
 	return
 }
 
-func (c *UserStore) Exists(ctx context.Context, id uuid.UUID) bool {
-	exists, e := c.c.Exists(ctx, fmt.Sprintf(defaultUserKey, id)).Result()
-	return exists == 0 && e == nil
+func (s *UserStore) Exists(ctx context.Context, id uuid.UUID) bool {
+	return s.j.ZScore(ctx, defaultUserListKey, id.String()).Err() == nil
 }
 
-func (c *UserStore) fallback(ctx context.Context, id uuid.UUID, handle string) *user.User {
-	u, _id := c.load(id, handle)
-	if u != nil && _id != uuid.Nil {
-		c.j.JSONSet(ctx, fmt.Sprintf(defaultUserKey, _id), "$", u)
+func (s *UserStore) fallback(ctx context.Context, id uuid.UUID, handle string) *user.User {
+	u := s.load(id, handle)
+	if u != nil && u.ID != uuid.Nil {
+		handle = u.Handle
+		s.j.TxPipelined(ctx, func(pipeliner redis.Pipeliner) error {
+			p := &rejson.ReJSON{Client: pipeliner}
+			if e := p.Set(ctx, fmt.Sprintf(defaultHandleToIdResolver, handle), u.ID.String(), time.Hour*12).Err(); e != nil {
+				return e
+			}
+			k := fmt.Sprintf(defaultUserKey, u.ID)
+			if e := p.JSONSet(ctx, k, "$", u); e != nil {
+				return e
+			}
+			return s.j.Expire(ctx, k, time.Hour*12).Err()
+		})
+		return u
 	}
-	return u
+	return nil
 }
 
-func (c *UserStore) Get(ctx context.Context, id uuid.UUID, handle string) *user.User {
+func (s *UserStore) Get(ctx context.Context, id uuid.UUID, handle string) *user.User {
 	if handle == "" && id == uuid.Nil {
 		return nil
 	}
 	if id == uuid.Nil {
-		if _id, e := c.c.Get(ctx, fmt.Sprintf(defaultHandleToIdResolver, handle)).Result(); e == nil && _id != "" && _id != uuid.Nil.String() {
+		if _id, e := s.j.Get(ctx, fmt.Sprintf(defaultHandleToIdResolver, handle)).Result(); e == nil && _id != "" && _id != uuid.Nil.String() {
 			id, e = uuid.Parse(_id)
 			if e == nil {
-				return c.fallback(ctx, id, "")
+				return s.fallback(ctx, id, "")
 			}
 		}
-		return c.fallback(ctx, uuid.Nil, handle)
+		return s.fallback(ctx, uuid.Nil, handle)
 	}
-	if c.c.ZScore(ctx, defaultUserListKey, id.String()).Err() == redis.Nil {
+	if !s.Exists(ctx, id) {
 		return nil
 	}
-	r, e := c.j.JSONGet(ctx, fmt.Sprintf(defaultUserKey, id), "$")
-	if e == redis.Nil {
-		return c.fallback(ctx, id, "")
-	}
-	var _u []user.User
-	if json.Unmarshal(r.([]byte), &_u) != nil {
-		return c.fallback(ctx, id, "")
+	r := s.j.JSONGet(ctx, fmt.Sprintf(defaultUserKey, id), "$")
+	if _u := rejson.Unmarshal[user.User](r); _u == nil {
+		return s.fallback(ctx, id, "")
 	} else if len(_u) > 0 {
-		return &_u[0]
+		return &(_u)[0]
 	}
 	return nil
+}
+
+func userToMinimalUser(u *user.User) *user.MinimalUser {
+	if u == nil {
+		return nil
+	}
+	var topRole interface{} = nil
+	if len(u.Roles) > 0 {
+		topRole = u.Roles[0]
+	}
+	return &user.MinimalUser{
+		ID:           u.ID.String(),
+		DisplayName:  u.DisplayName,
+		Handle:       u.Handle,
+		Avatar:       u.Avatar,
+		Organization: u.Organization,
+		TopRole:      topRole,
+		Rating:       u.Rating,
+	}
+}
+
+func (s *UserStore) GetMinimal(ctx context.Context, id uuid.UUID) *user.MinimalUser {
+	if id == uuid.Nil {
+		return nil
+	}
+	if !s.Exists(ctx, id) {
+		return nil
+	}
+	r := s.j.JSONGet(ctx, fmt.Sprintf(defaultUserKey, id), "$['id','displayName','handle','organization','avatar','roles','rating']")
+	res := rejson.Unmarshal[interface{}](r)
+	if res == nil || len(res) != 7 {
+		return userToMinimalUser(s.fallback(ctx, id, ""))
+	}
+	var topRole interface{} = nil
+	if _r, ok := res[5].([]interface{}); ok && len(_r) > 0 {
+		topRole = _r[0]
+	}
+	return &user.MinimalUser{
+		ID:           res[0].(string),
+		DisplayName:  res[1].(string),
+		Handle:       res[2].(string),
+		Organization: res[3].(string),
+		Avatar:       res[4].(string),
+		TopRole:      topRole,
+		Rating:       uint16(res[6].(float64)),
+	}
 }

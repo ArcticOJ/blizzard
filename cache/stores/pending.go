@@ -12,7 +12,7 @@ import (
 var Pending *PendingStore
 
 type PendingStore struct {
-	c  *redis.Client
+	c  redis.UniversalClient
 	l  sync.RWMutex
 	tl sync.RWMutex
 }

@@ -2,50 +2,9 @@ package judge
 
 import (
 	"blizzard/db/models/contest"
-	"sync"
 )
 
-var l sync.RWMutex
-
-var Status = make(map[string]*Judge)
-
-func LockStatus() {
-	l.Lock()
-}
-
-func UnlockStatus() {
-	l.Unlock()
-}
-
-func GetStatus() map[string]*Judge {
-	l.RLock()
-	defer l.RUnlock()
-	return Status
-}
-
 type (
-	Judge struct {
-		Alive    bool   `json:"alive"`
-		Version  string `json:"version"`
-		*Info    `json:"info"`
-		Runtimes []Runtime `json:"runtimes"`
-	}
-
-	Info struct {
-		Memory      uint32 `json:"memory"`
-		OS          string `json:"os"`
-		Parallelism uint8  `json:"parallelism"`
-		BootedSince uint64 `json:"bootedSince"`
-	}
-
-	Runtime struct {
-		ID        string `json:"id"`
-		Name      string `json:"name"`
-		Compiler  string `json:"compiler"`
-		Arguments string `json:"arguments"`
-		Version   string `json:"version"`
-	}
-
 	Submission struct {
 		ID          uint32
 		SourcePath  string
