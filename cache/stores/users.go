@@ -1,14 +1,13 @@
 package stores
 
 import (
-	"blizzard/cache"
-	"blizzard/db"
-	"blizzard/db/models/user"
-	"blizzard/logger"
-	"blizzard/rejson"
 	"context"
 	"crypto/md5"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/cache"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/rejson"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/tmthrgd/go-hex"
@@ -24,30 +23,29 @@ type UserStore struct {
 }
 
 const (
-	defaultUserListKey        = "blizzard::user_list"
 	defaultUserKey            = "blizzard::user[%s]"
 	defaultHandleToIdResolver = "blizzard::user_id[%s]"
 )
 
 func init() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	//defer cancel()
 	Users = &UserStore{j: &rejson.ReJSON{Client: cache.CreateClient(cache.User, "users")}}
-	var ids []string
-	logger.Panic(db.Database.NewSelect().Model((*user.User)(nil)).Column("id").Scan(ctx, &ids), "failed to to query for users")
-	var m []redis.Z
-	for _, id := range ids {
-		m = append(m, redis.Z{
-			Score:  0,
-			Member: id,
-		})
-	}
-	_, e := Users.j.TxPipelined(ctx, func(p redis.Pipeliner) error {
-		p.Del(ctx, defaultUserListKey)
-		p.ZAdd(ctx, defaultUserListKey, m...)
-		return nil
-	})
-	logger.Panic(e, "failed to populate user cache")
+	//var ids []string
+	//logger.Panic(db.Database.NewSelect().Model((*user.User)(nil)).Column("id").Scan(ctx, &ids), "failed to to query for users")
+	//var m []redis.Z
+	//for _, id := range ids {
+	//	m = append(m, redis.Z{
+	//		Score:  0,
+	//		Member: id,
+	//	})
+	//}
+	//_, e := Users.j.TxPipelined(ctx, func(p redis.Pipeliner) error {
+	//	p.Del(ctx, defaultUserListKey)
+	//	p.ZAdd(ctx, defaultUserListKey, m...)
+	//	return nil
+	//})
+	//logger.Panic(e, "failed to populate user cache")
 }
 
 func (s *UserStore) load(id uuid.UUID, handle string) (u *user.User) {
@@ -74,9 +72,9 @@ func (s *UserStore) load(id uuid.UUID, handle string) (u *user.User) {
 	return
 }
 
-func (s *UserStore) Exists(ctx context.Context, id uuid.UUID) bool {
-	return s.j.ZScore(ctx, defaultUserListKey, id.String()).Err() == nil
-}
+//func (s *UserStore) Exists(ctx context.Context, id uuid.UUID) bool {
+//	return s.j.ZScore(ctx, defaultUserListKey, id.String()).Err() == nil
+//}
 
 func (s *UserStore) fallback(ctx context.Context, id uuid.UUID, handle string) *user.User {
 	u := s.load(id, handle)
@@ -111,9 +109,9 @@ func (s *UserStore) Get(ctx context.Context, id uuid.UUID, handle string) *user.
 		}
 		return s.fallback(ctx, uuid.Nil, handle)
 	}
-	if !s.Exists(ctx, id) {
-		return nil
-	}
+	//if !s.Exists(ctx, id) {
+	//	return nil
+	//}
 	r := s.j.JSONGet(ctx, fmt.Sprintf(defaultUserKey, id), "$")
 	if _u := rejson.Unmarshal[user.User](r); _u == nil {
 		return s.fallback(ctx, id, "")
@@ -146,9 +144,9 @@ func (s *UserStore) GetMinimal(ctx context.Context, id uuid.UUID) *user.MinimalU
 	if id == uuid.Nil {
 		return nil
 	}
-	if !s.Exists(ctx, id) {
-		return nil
-	}
+	//if !s.Exists(ctx, id) {
+	//	return nil
+	//}
 	r := s.j.JSONGet(ctx, fmt.Sprintf(defaultUserKey, id), "$['id','displayName','handle','organization','avatar','roles','rating']")
 	res := rejson.Unmarshal[interface{}](r)
 	if res == nil || len(res) != 7 {

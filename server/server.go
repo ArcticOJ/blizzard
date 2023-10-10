@@ -1,11 +1,11 @@
 package server
 
 import (
-	"blizzard/config"
-	"blizzard/logger"
-	"blizzard/routes"
-	"blizzard/server/http"
-	"blizzard/server/middlewares"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/logger"
+	"github.com/ArcticOJ/blizzard/v0/routes"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
+	"github.com/ArcticOJ/blizzard/v0/server/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	nethttp "net/http"

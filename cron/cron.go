@@ -1,8 +1,8 @@
 package cron
 
 import (
-	"blizzard/cron/jobs"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/cron/jobs"
 	"github.com/go-co-op/gocron"
 	"sync"
 	"time"

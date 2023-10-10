@@ -1,11 +1,11 @@
 package jobs
 
 import (
-	"blizzard/cache/stores"
-	"blizzard/db"
-	"blizzard/db/models/contest"
-	"blizzard/logger"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/cache/stores"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 )
 
 func PurgeSubmissions(ctx context.Context) {

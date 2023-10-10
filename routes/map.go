@@ -1,16 +1,16 @@
 package routes
 
 import (
-	"blizzard/routes/auth"
-	"blizzard/routes/contests"
-	"blizzard/routes/oauth"
-	"blizzard/routes/posts"
-	"blizzard/routes/problems"
-	"blizzard/routes/root"
-	"blizzard/routes/submissions"
-	"blizzard/routes/user"
-	"blizzard/routes/users"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/routes/auth"
+	"github.com/ArcticOJ/blizzard/v0/routes/contests"
+	"github.com/ArcticOJ/blizzard/v0/routes/oauth"
+	"github.com/ArcticOJ/blizzard/v0/routes/posts"
+	"github.com/ArcticOJ/blizzard/v0/routes/problems"
+	"github.com/ArcticOJ/blizzard/v0/routes/root"
+	"github.com/ArcticOJ/blizzard/v0/routes/submissions"
+	"github.com/ArcticOJ/blizzard/v0/routes/user"
+	"github.com/ArcticOJ/blizzard/v0/routes/users"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 
 var Map = map[string]http.RouteMap{

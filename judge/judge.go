@@ -1,7 +1,7 @@
 package judge
 
 import (
-	"blizzard/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
 )
 
 type (

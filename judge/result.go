@@ -1,6 +1,6 @@
 package judge
 
-import "blizzard/db/models/contest"
+import "github.com/ArcticOJ/blizzard/v0/db/models/contest"
 
 type (
 	CaseVerdict  int8

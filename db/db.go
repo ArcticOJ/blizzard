@@ -1,10 +1,10 @@
 package db
 
 import (
-	"blizzard/config"
-	"blizzard/db/seed"
 	"database/sql"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/db/seed"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"

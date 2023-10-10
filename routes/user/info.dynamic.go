@@ -1,8 +1,8 @@
 package user
 
 import (
-	"blizzard/cache/stores"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/cache/stores"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/google/uuid"
 )
 

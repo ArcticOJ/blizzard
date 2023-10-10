@@ -1,10 +1,10 @@
 package seed
 
 import (
-	"blizzard/db/models/contest"
-	"blizzard/db/models/post"
-	"blizzard/db/models/user"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/db/models/post"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
 	"github.com/uptrace/bun"
 )
 
@@ -35,7 +35,7 @@ func RegisterModels(db *bun.DB) {
 func DropAll(db *bun.DB, ctx context.Context) error {
 	m := append(models, intermediaryModels...)
 	for i := range m {
-		if _, e := db.NewDropTable().Model(m[i]).IfExists().Exec(ctx); e != nil {
+		if _, e := db.NewDropTable().Model(m[i]).Cascade().IfExists().Exec(ctx); e != nil {
 			return e
 		}
 	}

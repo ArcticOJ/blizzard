@@ -1,11 +1,11 @@
 package stores
 
 import (
-	"blizzard/cache"
-	"blizzard/config"
-	"blizzard/logger"
 	"context"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/cache"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/redis/go-redis/v9"
 	"math"
 )

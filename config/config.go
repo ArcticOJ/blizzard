@@ -1,7 +1,7 @@
 package config
 
 import (
-	"blizzard/logger"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v3"
 	"os"

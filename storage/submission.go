@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"blizzard/config"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/config"
 	"io"
 	"mime/multipart"
 	"os"

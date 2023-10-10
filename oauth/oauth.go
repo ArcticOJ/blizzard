@@ -1,9 +1,9 @@
 package oauth
 
 import (
-	"blizzard/config"
-	"blizzard/oauth/providers"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/oauth/providers"
 	"golang.org/x/oauth2"
 	"sort"
 )

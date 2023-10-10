@@ -1,11 +1,11 @@
 package user
 
 import (
-	"blizzard/db"
-	"blizzard/db/models/user"
-	"blizzard/server/http"
-	"blizzard/utils"
 	"encoding/base64"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
+	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/labstack/echo/v4"
 	"strconv"
 	"time"

@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"blizzard/core"
-	"blizzard/db"
-	"blizzard/db/models/user"
-	"blizzard/server/http"
-	"blizzard/utils"
+	"github.com/ArcticOJ/blizzard/v0/core"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
+	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/uptrace/bun/driver/pgdriver"
 	"strings"

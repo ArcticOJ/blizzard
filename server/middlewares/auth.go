@@ -1,11 +1,11 @@
 package middlewares
 
 import (
-	"blizzard/cache/stores"
-	"blizzard/db"
-	"blizzard/db/models/user"
-	"blizzard/server/http"
-	"blizzard/server/session"
+	"github.com/ArcticOJ/blizzard/v0/cache/stores"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
+	"github.com/ArcticOJ/blizzard/v0/server/session"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"strings"
@@ -37,8 +37,13 @@ func Authentication() echo.MiddlewareFunc {
 			if e != nil || cookie.Value == "" {
 				return invalidate(ctx, next)
 			}
-			if uid := session.Decrypt(cookie.Value); uid != uuid.Nil && stores.Users.Exists(ctx.Request().Context(), uid) {
-				ctx.Set("user", uid)
+			if uid := session.Decrypt(cookie.Value); uid != uuid.Nil {
+				u := stores.Users.GetMinimal(c.Request().Context(), uid)
+				if u == nil {
+					return invalidate(ctx, next)
+				}
+				ctx.Set("id", uid)
+				ctx.Set("user", u)
 			}
 			return next(c)
 		}

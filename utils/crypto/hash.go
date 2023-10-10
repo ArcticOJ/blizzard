@@ -1,9 +1,9 @@
 package crypto
 
 import (
-	"blizzard/config"
 	"crypto/hmac"
 	"crypto/sha256"
+	"github.com/ArcticOJ/blizzard/v0/config"
 	"hash"
 )
 

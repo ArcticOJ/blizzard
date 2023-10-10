@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 
 func Logout(ctx *http.Context) http.Response {

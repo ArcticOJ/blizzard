@@ -1,16 +1,15 @@
 package user
 
 import (
-	"blizzard/cache/stores"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 
 func Index(ctx *http.Context) http.Response {
 	if ctx.RequireAuth() {
 		return nil
 	}
-	if user := stores.Users.GetMinimal(ctx.Request().Context(), ctx.GetUUID()); user != nil {
-		return ctx.Respond(user)
+	if u := ctx.GetUser(); u != nil {
+		return ctx.Respond(u)
 	}
 	return ctx.NotFound("User not found.")
 }

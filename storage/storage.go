@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"blizzard/config"
-	"blizzard/logger"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	"os"
 )
 

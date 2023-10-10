@@ -1,9 +1,9 @@
 package submissions
 
 import (
-	"blizzard/db"
-	"blizzard/db/models/contest"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 
 func Submissions(ctx *http.Context) http.Response {

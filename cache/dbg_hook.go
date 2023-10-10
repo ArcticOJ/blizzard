@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"blizzard/logger"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/redis/go-redis/v9"
 	"net"
 )

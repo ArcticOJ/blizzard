@@ -1,16 +1,17 @@
 package judge
 
 import (
-	"blizzard/cache/stores"
-	"blizzard/config"
-	"blizzard/db"
-	"blizzard/db/models/contest"
-	"blizzard/logger"
-	"blizzard/utils"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/cache/stores"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/logger"
+	"github.com/ArcticOJ/blizzard/v0/utils"
+	"github.com/Jeffail/tunny"
 	"github.com/mitchellh/mapstructure"
 	amqp "github.com/rabbitmq/amqp091-go"
 	amqp2 "github.com/rabbitmq/rabbitmq-stream-go-client/pkg/amqp"
@@ -22,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strconv"
 	"time"
 )
@@ -50,6 +52,7 @@ type (
 		mqChan     *amqp.Channel
 		mqConn     *amqp.Connection
 		env        *stream.Environment
+		pool       *tunny.Pool
 	}
 
 	Subscription struct {
@@ -73,10 +76,15 @@ type (
 		Headers map[string]interface{}
 		Body    interface{}
 	}
+
+	consumeParams struct {
+		id   uint32
+		name string
+	}
 )
 
-func NewObserver(ctx context.Context) *Worker {
-	return &Worker{
+func NewWorker(ctx context.Context) (w *Worker) {
+	w = &Worker{
 		c: &http.Client{
 			Timeout: time.Second,
 		},
@@ -90,6 +98,13 @@ func NewObserver(ctx context.Context) *Worker {
 		errChan:    make(<-chan *amqp.Error, 1),
 		returnChan: make(<-chan amqp.Return, 1),
 	}
+	w.pool = tunny.NewFunc(runtime.NumCPU(), func(i interface{}) interface{} {
+		if p, ok := i.(consumeParams); ok {
+			return w.consume(p.id, p.name)
+		}
+		return nil
+	})
+	return
 }
 
 func (w *Worker) Connect() {
@@ -107,10 +122,10 @@ func (w *Worker) Connect() {
 	w.mqChan, e = w.mqConn.Channel()
 	logger.Panic(e, "failed to open a channel for queue")
 	logger.Panic(w.mqChan.ExchangeDeclare("submissions", "direct", true, false, false, false, amqp.Table{
-		"x-consumer-timeout": 3600000,
+		"x-consumer-timeout": time.Hour.Milliseconds(),
 	}), "failed to declare exchange for submissions")
 	logger.Panic(w.mqChan.Qos(100, 0, false), "failed to set qos")
-	logger.Panic(w.mqChan.ExchangeDeclare("results", "fanout", true, false, false, false, nil), "could not declare exchange for results")
+	logger.Panic(w.mqChan.ExchangeDeclare("results", "direct", true, false, false, false, nil), "could not declare exchange for results")
 	w.errChan = w.mqConn.NotifyClose(make(chan *amqp.Error, 1))
 	w.returnChan = w.mqChan.NotifyReturn(make(chan amqp.Return, 1))
 	w.RecoverResults()
@@ -194,7 +209,7 @@ func (w *Worker) Enqueue(sub *Submission, t time.Time) error {
 		w.env.DeleteStream(name)
 		return e
 	}
-	conf, e := w.mqChan.PublishWithDeferredConfirmWithContext(
+	e = w.mqChan.PublishWithContext(
 		w.ctx,
 		"submissions",
 		sub.Language,
@@ -211,7 +226,7 @@ func (w *Worker) Enqueue(sub *Submission, t time.Time) error {
 	if e != nil {
 		w.env.DeleteStream(name)
 	}
-	return stores.Pending.Set(w.ctx, sub.ID, conf.DeliveryTag, sub.TestCount, uint16(math.Ceil(float64(sub.Constraints.TimeLimit))))
+	return stores.Pending.Set(w.ctx, sub.ID, 0, sub.TestCount, uint16(math.Ceil(float64(sub.Constraints.TimeLimit))))
 
 }
 
@@ -225,13 +240,16 @@ func (w *Worker) Cancel(ctx context.Context, id uint32) error {
 	return errors.New("could not cancel specified submission")
 }
 
-func (w *Worker) Consume(id uint32, name string) error {
+// TODO: figure out a way to avoid race condition as two judges may judge a submission concurrently, wasting resources.
+
+func (w *Worker) consume(id uint32, name string) bool {
 	lastNonAcVerdict := contest.None
 	_, e := w.env.NewConsumer(name, func(ctx stream.ConsumerContext, msg *amqp2.Message) {
 		var r res
 		if msgpack.Unmarshal(msg.Data[0], &r) != nil {
 			return
 		}
+		fmt.Println(r.Headers["from"])
 		if r.Headers["type"] == "final" {
 			ctx.Consumer.Close()
 			var _r FinalResult
@@ -257,7 +275,17 @@ func (w *Worker) Consume(id uint32, name string) error {
 			w.publish(id, _r, ttl)
 		}
 	}, stream.NewConsumerOptions().SetOffset(stream.OffsetSpecification{}.First()).SetCRCCheck(false))
-	return e
+	return e == nil
+}
+
+func (w *Worker) Consume(id uint32, name string) error {
+	if e, ok := w.pool.Process(consumeParams{
+		id:   id,
+		name: name,
+	}).(bool); ok && !e {
+		return fmt.Errorf("could not start consuming queue '%s'", name)
+	}
+	return nil
 }
 
 func (w *Worker) Reconnect() {

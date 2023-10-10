@@ -1,10 +1,10 @@
 package root
 
 import (
-	"blizzard/build"
-	"blizzard/cache/stores"
-	"blizzard/server/http"
 	"encoding/json"
+	"github.com/ArcticOJ/blizzard/v0/build"
+	"github.com/ArcticOJ/blizzard/v0/cache/stores"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/labstack/echo/v4"
 )
 

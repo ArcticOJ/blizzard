@@ -1,9 +1,9 @@
 package providers
 
 import (
-	"blizzard/logger/debug"
-	"blizzard/utils"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/logger/debug"
+	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/ravener/discord-oauth2"
 	"net/http"
 	"strings"

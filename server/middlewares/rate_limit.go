@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"blizzard/cache/stores"
+	"github.com/ArcticOJ/blizzard/v0/cache/stores"
 	"github.com/labstack/echo/v4"
 	"strconv"
 )

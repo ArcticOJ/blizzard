@@ -1,8 +1,8 @@
 package submissions
 
 import (
-	"blizzard/judge"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/judge"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"strconv"
 )
 

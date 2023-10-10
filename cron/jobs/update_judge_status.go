@@ -1,11 +1,11 @@
 package jobs
 
 import (
-	"blizzard/cache/stores"
-	"blizzard/config"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/cache/stores"
+	"github.com/ArcticOJ/blizzard/v0/config"
 	"net/http"
 	"net/url"
 	"time"

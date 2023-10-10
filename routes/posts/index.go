@@ -1,9 +1,9 @@
 package posts
 
 import (
-	"blizzard/db"
-	"blizzard/db/models/post"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/post"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 
 func Index(ctx *http.Context) http.Response {

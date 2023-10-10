@@ -1,9 +1,9 @@
 package db
 
 import (
-	"blizzard/logger"
 	"context"
 	"errors"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/uptrace/bun"
 	"reflect"
 	"time"

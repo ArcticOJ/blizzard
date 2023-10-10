@@ -1,7 +1,7 @@
 package user
 
 import (
-	"blizzard/permission"
+	"github.com/ArcticOJ/blizzard/v0/permission"
 )
 
 type Role struct {

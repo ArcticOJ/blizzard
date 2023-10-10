@@ -1,13 +1,13 @@
 package blizzard
 
 import (
-	"blizzard/cron"
-	"blizzard/judge"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/cron"
+	"github.com/ArcticOJ/blizzard/v0/judge"
 )
 
 func Init(ctx context.Context) {
-	judge.ResponseWorker = judge.NewObserver(ctx)
+	judge.ResponseWorker = judge.NewWorker(ctx)
 	cron.Start(ctx)
 	go judge.ResponseWorker.Work()
 }

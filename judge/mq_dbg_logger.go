@@ -1,8 +1,8 @@
 package judge
 
 import (
-	"blizzard/config"
-	"blizzard/logger"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 

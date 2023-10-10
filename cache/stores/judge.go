@@ -1,8 +1,8 @@
 package stores
 
 import (
-	"blizzard/cache"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/cache"
 	"github.com/redis/go-redis/v9"
 	"time"
 )

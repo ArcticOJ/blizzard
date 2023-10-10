@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"blizzard/db"
-	"blizzard/db/models/user"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/matthewhartstonge/argon2"
 	"strings"
 )

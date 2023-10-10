@@ -1,10 +1,10 @@
 package cache
 
 import (
-	"blizzard/config"
-	"blizzard/logger"
 	"context"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/redis/go-redis/v9"
 	"net"
 	"time"
@@ -20,6 +20,7 @@ const (
 	Bucket
 	Submission
 	Judge
+	Problem
 )
 
 func CreateClient(db DB, name string) (c redis.UniversalClient) {

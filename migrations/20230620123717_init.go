@@ -1,8 +1,8 @@
 package migrations
 
 import (
-	"blizzard/db/seed"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/db/seed"
 	"github.com/uptrace/bun"
 )
 

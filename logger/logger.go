@@ -30,7 +30,7 @@ func createLogger(scope string) zerolog.Logger {
 			if _t, e := t.Int64(); e != nil {
 				return ""
 			} else {
-				return "\033[0;36m " + time.UnixMilli(_t).Format("02/01/2006 15:04:05") + "\033[0m"
+				return "\033[0;36m " + time.UnixMilli(_t).Format("02/01/2006 15:04:05.000") + "\033[0m"
 			}
 		},
 		FormatMessage: func(i interface{}) string {

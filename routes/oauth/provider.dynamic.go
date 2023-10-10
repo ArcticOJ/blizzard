@@ -1,12 +1,12 @@
 package oauth
 
 import (
-	"blizzard/oauth"
-	"blizzard/server/http"
-	"blizzard/utils"
-	"blizzard/utils/crypto"
 	"encoding/base64"
 	"fmt"
+	"github.com/ArcticOJ/blizzard/v0/oauth"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
+	"github.com/ArcticOJ/blizzard/v0/utils"
+	"github.com/ArcticOJ/blizzard/v0/utils/crypto"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/oauth2"
 	"strings"

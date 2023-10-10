@@ -2,8 +2,8 @@ package session
 
 import (
 	"aidanwoods.dev/go-paseto"
-	"blizzard/config"
-	"blizzard/logger"
+	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/google/uuid"
 	"time"
 )

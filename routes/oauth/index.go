@@ -1,11 +1,11 @@
 package oauth
 
 import (
-	"blizzard/db"
-	"blizzard/db/models/user"
-	"blizzard/logger/debug"
-	"blizzard/oauth"
-	"blizzard/server/http"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/logger/debug"
+	"github.com/ArcticOJ/blizzard/v0/oauth"
+	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )

@@ -1,8 +1,8 @@
 package user
 
 import (
-	"blizzard/db/utils"
 	"context"
+	"github.com/ArcticOJ/blizzard/v0/db/utils"
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 )

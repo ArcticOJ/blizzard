@@ -1,7 +1,7 @@
 package post
 
 import (
-	"blizzard/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/db/models/user"
 	"github.com/google/uuid"
 	"time"
 )
