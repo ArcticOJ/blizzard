@@ -275,7 +275,6 @@ func (w *worker) consume(id uint32, name string) bool {
 			break
 		}
 	}, stream.NewConsumerOptions().SetOffset(stream.OffsetSpecification{}.First()).SetCRCCheck(false))
-	logger.Panic(e, "test")
 	return e == nil
 }
 
