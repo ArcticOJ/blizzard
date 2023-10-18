@@ -34,9 +34,9 @@ func Register(e *echo.Echo) {
 		g.Use(middlewares.RateLimit())
 	}
 	if config.Config.Debug {
-		g.Use(middleware.BodyDump(func(c echo.Context, req, res []byte) {
-			logger.Blizzard.Debug().Str("url", c.Request().RequestURI).Bytes("req", req).Bytes("res", res).Msg("body")
-		}))
+		//g.Use(middleware.BodyDump(func(c echo.Context, req, res []byte) {
+		//	logger.Blizzard.Debug().Str("url", c.Request().RequestURI).Bytes("req", req).Bytes("res", res).Msg("body")
+		//}))
 		g.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 			LogURI:    true,
 			LogStatus: true,

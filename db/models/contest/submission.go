@@ -11,16 +11,18 @@ type (
 		ID       uint32    `bun:",pk,autoincrement" json:"id" json:"-"`
 		AuthorID uuid.UUID `bun:",type:uuid" json:"-"`
 		// file extension of the source code, we're using extension instead of full path because source code file name pattern is static except for the extension
-		Extension   string     `bun:",notnull"`
+		Extension   string     `bun:",notnull" json:"extension"`
 		ProblemID   string     `json:"-"`
+		Problem     *Problem   `bun:"rel:belongs-to,join:problem_id=id" json:"problem,omitempty"`
 		Language    string     `json:"language"`
 		SubmittedAt *time.Time `bun:",nullzero,notnull,default:'now()'" json:"submittedAt"`
 		Result      *Result    `json:"result"`
-		Author      *user.User `json:"author,omitempty"`
+		Author      *user.User `bun:"rel:belongs-to,join:author_id=id" json:"author,omitempty"`
 	}
 
 	Verdict    string
 	CaseResult struct {
+		ID       uint16  `json:"id"`
 		Message  string  `json:"message,omitempty"`
 		Verdict  Verdict `json:"verdict"`
 		Memory   uint32  `json:"memory"`
@@ -29,7 +31,8 @@ type (
 	FinalResult struct {
 		CompilerOutput string  `json:"compilerOutput"`
 		Verdict        Verdict `json:"verdict"`
-		Point          uint32  `json:"point"`
+		Points         float32 `json:"points"`
+		MaxPoints      float32 `json:"maxPoints"`
 	}
 	Result struct {
 		Cases []CaseResult `json:"cases,omitempty"`

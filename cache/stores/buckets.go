@@ -10,19 +10,19 @@ import (
 	"math"
 )
 
-var RateLimiter *RateLimitStore
+var RateLimiter *rateLimitStore
 
 const defaultBucketKey = "blizzard::bucket[%s]"
 
-type RateLimitStore struct {
+type rateLimitStore struct {
 	c redis.UniversalClient
 }
 
 func init() {
-	RateLimiter = &RateLimitStore{cache.CreateClient(cache.Bucket, "buckets")}
+	RateLimiter = &rateLimitStore{cache.CreateClient(cache.Bucket, "buckets")}
 }
 
-func (s *RateLimitStore) Limit(ctx context.Context, ip string) (allowed bool, totalLimit, remaining, retryAfter, nextReset int64) {
+func (s *rateLimitStore) Limit(ctx context.Context, ip string) (allowed bool, totalLimit, remaining, retryAfter, nextReset int64) {
 	v, e := s.c.Do(ctx, "CL.THROTTLE", fmt.Sprintf(defaultBucketKey, ip), uint16(math.Max(math.Ceil(float64(config.Config.RateLimit)/2), 1)), config.Config.RateLimit, 30, 1).Int64Slice()
 	if e != nil || len(v) != 5 {
 		logger.Blizzard.Err(e).Msgf("failed to process rate limit for '%s'", ip)

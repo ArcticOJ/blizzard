@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	aidanwoods.dev/go-paseto v1.5.0
+	github.com/Jeffail/tunny v0.1.4
 	github.com/go-co-op/gocron v1.35.0
 	github.com/go-playground/validator/v10 v10.15.4
 	github.com/google/uuid v1.3.1
@@ -11,6 +12,7 @@ require (
 	github.com/labstack/echo/v4 v4.11.1
 	github.com/matthewhartstonge/argon2 v0.3.4
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/rabbitmq/amqp091-go v1.8.1
 	github.com/rabbitmq/rabbitmq-stream-go-client v1.2.1
 	github.com/ravener/discord-oauth2 v0.0.0-20230514095040-ae65713199b3
@@ -29,7 +31,6 @@ require (
 
 require (
 	aidanwoods.dev/go-result v0.1.0 // indirect
-	github.com/Jeffail/tunny v0.1.4 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect

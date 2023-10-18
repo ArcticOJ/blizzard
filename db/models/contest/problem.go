@@ -15,7 +15,8 @@ type (
 		*ProblemContent `bun:"embed:"`
 		Constraints     *Constraints `bun:"embed:" json:"constraints,omitempty"`
 		TestCount       uint16       `bun:",notnull" json:"testCount,omitempty"`
-		PointPerTest    uint16       `bun:",default:1" json:"pointPerTest,omitempty"`
+		PointsPerTest   float32      `bun:",default:1" json:"pointPerTest,omitempty"`
+		Submissions     []Submission `bun:"rel:has-many,join:id=problem_id" json:"submissions,omitempty"`
 	}
 
 	ProblemContent struct {

@@ -1,13 +1,18 @@
 package stores
 
 import (
+	"context"
+	"fmt"
 	"github.com/ArcticOJ/blizzard/v0/cache"
+	"github.com/ArcticOJ/blizzard/v0/db"
+	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
 	"github.com/ArcticOJ/blizzard/v0/rejson"
+	"time"
 )
 
-var Problems *ProblemStore
+var Problems *problemStore
 
-type ProblemStore struct {
+type problemStore struct {
 	j *rejson.ReJSON
 }
 
@@ -16,9 +21,29 @@ const (
 )
 
 func init() {
-	Problems = &ProblemStore{j: &rejson.ReJSON{Client: cache.CreateClient(cache.Problem, "problems")}}
+	Problems = &problemStore{j: &rejson.ReJSON{Client: cache.CreateClient(cache.Problem, "problems")}}
 }
 
-func (*ProblemStore) Get() {
+func (s *problemStore) fallback(ctx context.Context, id string) *contest.Problem {
+	prob := new(contest.Problem)
+	if db.Database.NewSelect().Model(prob).Where("id = ?", id).Scan(ctx) != nil {
+		return nil
+	}
+	// TODO: use global context to avoid interrupted operations
+	s.j.JTxPipelined(ctx, func(r *rejson.ReJSON) error {
+		k := fmt.Sprintf(defaultProblemKey, id)
+		if e := r.JSONSet(ctx, k, "$", prob); e != nil {
+			return e
+		}
+		return r.Expire(ctx, k, time.Hour*12).Err()
+	})
+	return prob
+}
 
+func (s *problemStore) Get(ctx context.Context, id string) *contest.Problem {
+	p := s.j.JSONGet(ctx, fmt.Sprintf(defaultProblemKey, id))
+	//if p == nil {
+	//	return s.fallback(ctx, id)
+	//}
+	return rejson.Unmarshal[contest.Problem](p)
 }

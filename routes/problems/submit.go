@@ -4,16 +4,13 @@ package problems
 
 import (
 	"context"
-	"errors"
 	"github.com/ArcticOJ/blizzard/v0/cache/stores"
-	"github.com/ArcticOJ/blizzard/v0/core"
-	"github.com/ArcticOJ/blizzard/v0/core/errs"
 	"github.com/ArcticOJ/blizzard/v0/db"
 	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
 	"github.com/ArcticOJ/blizzard/v0/judge"
-	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/ArcticOJ/blizzard/v0/storage"
+	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/google/uuid"
 	"path"
 	"strings"
@@ -21,29 +18,18 @@ import (
 
 func prepare(id uint32, _path, language string, problem *contest.Problem) *judge.Submission {
 	return &judge.Submission{
-		ID:          id,
-		Language:    language,
-		SourcePath:  path.Base(_path),
-		ProblemID:   problem.ID,
-		TestCount:   problem.TestCount,
-		Constraints: problem.Constraints,
+		ID:            id,
+		Language:      language,
+		SourcePath:    path.Base(_path),
+		ProblemID:     problem.ID,
+		TestCount:     problem.TestCount,
+		PointsPerTest: problem.PointsPerTest,
+		Constraints:   *problem.Constraints,
 	}
 }
 
-func getExt(language, fileName string) string {
-	ext := strings.ToLower(strings.TrimLeft(path.Ext(fileName), "."))
-	if ext == "" {
-		if l, ok := core.LanguageMatrix[language]; ok {
-			return l.Extension
-		}
-		return ""
-	}
-	for _, l := range core.LanguageMatrix {
-		if l.Extension == ext {
-			return ext
-		}
-	}
-	return ""
+func getExt(fileName string) string {
+	return strings.ToLower(strings.TrimLeft(path.Ext(fileName), "."))
 }
 
 func createSubmission(ctx context.Context, userId uuid.UUID, problem, language string, ext string) (*contest.Submission, func() error, func() error) {
@@ -64,24 +50,19 @@ func createSubmission(ctx context.Context, userId uuid.UUID, problem, language s
 	return sub, tx.Rollback, tx.Commit
 }
 
-// TODO: check availability of judges before judging
-
 func Submit(ctx *http.Context) http.Response {
 	if ctx.RequireAuth() {
 		return nil
 	}
 	code, e := ctx.FormFile("code")
+	shouldStream := ctx.FormValue("stream") == "true"
 	if e != nil {
 		return ctx.Bad("No code.")
 	}
 	lang := ctx.FormValue("language")
-	logger.Blizzard.Debug().Str("lang", lang).Send()
 	id := ctx.Param("problem")
 	var problem contest.Problem
-	if _, ok := core.LanguageMatrix[lang]; !ok {
-		return ctx.Bad("Unsupported language!")
-	}
-	ext := getExt(lang, code.Filename)
+	ext := getExt(code.Filename)
 	f, e := code.Open()
 	if e != nil {
 		return ctx.Bad("Could not open uploaded code!")
@@ -92,7 +73,11 @@ func Submit(ctx *http.Context) http.Response {
 	if db.Database.NewSelect().Model(&problem).Where("id = ?", id).Scan(ctx.Request().Context()) != nil {
 		return ctx.NotFound("Problem not found.")
 	}
+	if len(problem.Constraints.AllowedLanguages) > 0 && !utils.ArrayIncludes(problem.Constraints.AllowedLanguages, lang) {
+		return ctx.Bad("This language is not allowed by current problem.")
+	}
 	// might not be accurate
+	// TODO: group judges by supported runtimes and do icmp pings on demand
 	if !stores.Judge.IsRuntimeAllowed(ctx.Request().Context(), lang) {
 		return ctx.InternalServerError("No judge server is available to handle this submission.")
 	}
@@ -102,27 +87,29 @@ func Submit(ctx *http.Context) http.Response {
 	}
 	p := storage.Submission.Create(dbSub.ID, ext)
 	sub := prepare(dbSub.ID, p, lang, &problem)
-	if storage.Submission.Write(p, f) != nil {
-		return ctx.Bad("Could not write code to file!")
+	var res chan interface{}
+	if shouldStream {
+		res = judge.Worker.Subscribe(sub.ID)
 	}
-	res := make(chan interface{}, 1)
-	s := judge.ResponseWorker.Observe(sub.ID, res)
-	if judge.ResponseWorker.Enqueue(sub, *dbSub.SubmittedAt) != nil {
-		judge.ResponseWorker.DestroyObserver(sub.ID)
+	if judge.Worker.Enqueue(sub, *dbSub.SubmittedAt) != nil || storage.Submission.Write(p, f) != nil {
+		judge.Worker.DestroySubscribers(sub.ID)
 		rollback()
-		if errors.Is(e, errs.JudgeNotAvailable) {
-			return ctx.InternalServerError("No judge is available for this language.")
+		return ctx.InternalServerError("Failed to process your submission.")
+	}
+	if commit() != nil {
+		return ctx.InternalServerError("Could not save submission to database.")
+	}
+	if shouldStream && res != nil {
+		stream := ctx.StreamResponse()
+		go func() {
+			<-ctx.Request().Context().Done()
+			judge.Worker.Unsubscribe(sub.ID, res)
+		}()
+		for r := range res {
+			stream.Write(r)
 		}
-		return ctx.InternalServerError("Failed to enqueue submission.")
+		return ctx.Success()
+	} else {
+		return ctx.Respond(dbSub.ID)
 	}
-	commit()
-	stream := ctx.StreamResponse()
-	go func() {
-		<-ctx.Request().Context().Done()
-		judge.ResponseWorker.StopObserving(s)
-	}()
-	for r := range res {
-		stream.Write(r)
-	}
-	return ctx.Success()
 }

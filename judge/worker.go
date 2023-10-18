@@ -13,6 +13,7 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/Jeffail/tunny"
 	"github.com/mitchellh/mapstructure"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
 	amqp2 "github.com/rabbitmq/rabbitmq-stream-go-client/pkg/amqp"
 	"github.com/rabbitmq/rabbitmq-stream-go-client/pkg/stream"
@@ -28,23 +29,16 @@ import (
 	"time"
 )
 
-var ResponseWorker *Worker
+var Worker *worker
 
 type (
-	Worker struct {
+	worker struct {
 		c   *http.Client
 		s   *semaphore.Weighted
 		ctx context.Context
 		// subscribers
-		sm map[uint32][]chan<- interface{}
-		// sub channel
-		sc chan Subscription
-		// unsub channel
-		usc chan Subscription
-		// pub channel
-		pc chan result
-		// destroy channel
-		dc chan uint32
+		// use nested hashmap for result chan for easier removal
+		sm cmap.ConcurrentMap[uint32, []chan interface{}]
 		// result message queue
 		errChan    <-chan *amqp.Error
 		returnChan <-chan amqp.Return
@@ -53,17 +47,6 @@ type (
 		mqConn     *amqp.Connection
 		env        *stream.Environment
 		pool       *tunny.Pool
-	}
-
-	Subscription struct {
-		id uint32
-		c  chan<- interface{}
-	}
-
-	result struct {
-		id   uint32
-		ttl  uint16
-		data interface{}
 	}
 
 	rmqApiResponse struct {
@@ -81,20 +64,23 @@ type (
 		id   uint32
 		name string
 	}
+
+	result struct {
+		contest.FinalResult
+		Cases []contest.CaseResult `json:"cases"`
+	}
 )
 
-func NewWorker(ctx context.Context) (w *Worker) {
-	w = &Worker{
+func NewWorker(ctx context.Context) (w *worker) {
+	w = &worker{
 		c: &http.Client{
 			Timeout: time.Second,
 		},
-		s:          semaphore.NewWeighted(8),
-		ctx:        ctx,
-		sm:         make(map[uint32][]chan<- interface{}),
-		sc:         make(chan Subscription, 1),
-		pc:         make(chan result, 1),
-		usc:        make(chan Subscription, 1),
-		dc:         make(chan uint32, 1),
+		s:   semaphore.NewWeighted(int64(runtime.NumCPU())),
+		ctx: ctx,
+		sm: cmap.NewWithCustomShardingFunction[uint32, []chan interface{}](func(key uint32) uint32 {
+			return key
+		}),
 		errChan:    make(<-chan *amqp.Error, 1),
 		returnChan: make(<-chan amqp.Return, 1),
 	}
@@ -107,7 +93,7 @@ func NewWorker(ctx context.Context) (w *Worker) {
 	return
 }
 
-func (w *Worker) Connect() {
+func (w *worker) Connect() {
 	var e error
 	if w.mqConn != nil {
 		w.mqConn.Close()
@@ -126,23 +112,24 @@ func (w *Worker) Connect() {
 	}), "failed to declare exchange for submissions")
 	logger.Panic(w.mqChan.Qos(100, 0, false), "failed to set qos")
 	logger.Panic(w.mqChan.ExchangeDeclare("results", "direct", true, false, false, false, nil), "could not declare exchange for results")
+	//logger.Panic(w.mqChan.Confirm(false), "failed to put channel to confirm mode")
 	w.errChan = w.mqConn.NotifyClose(make(chan *amqp.Error, 1))
 	w.returnChan = w.mqChan.NotifyReturn(make(chan amqp.Return, 1))
 	w.RecoverResults()
 }
 
-func (w *Worker) RecoverResults() {
+func (w *worker) RecoverResults() {
 	conf := config.Config.RabbitMQ
 	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/exchanges/%s/results/bindings/source", conf.Host, conf.ManagerPort, url.PathEscape(conf.VHost)), nil)
 	req.SetBasicAuth(conf.Username, conf.Password)
-	if res, e := w.c.Do(req); e == nil {
-		var r []rmqApiResponse
-		if json.NewDecoder(res.Body).Decode(&r) != nil {
+	if r, e := w.c.Do(req); e == nil {
+		var mqr []rmqApiResponse
+		if json.NewDecoder(r.Body).Decode(&mqr) != nil {
 			return
 		}
-		for _, _r := range r {
+		for _, _r := range mqr {
 			_id, ok := _r.Arguments["x-id"]
-			if !ok || !stores.Pending.IsPending(w.ctx, uint32(_id.(float64))) {
+			if !ok || !stores.Submissions.IsPending(w.ctx, uint32(_id.(float64))) {
 				w.mqChan.QueueDelete(_r.Destination, true, false, true)
 			} else {
 				if _e := w.Consume(uint32(_id.(float64)), _r.Destination); e != nil {
@@ -158,7 +145,7 @@ func (w *Worker) RecoverResults() {
 
 // TODO: implement auto reconnect
 
-func (w *Worker) CreateStream() {
+func (w *worker) CreateStream() {
 	var e error
 	conf := config.Config.RabbitMQ
 	w.env, e = stream.NewEnvironment(
@@ -173,16 +160,16 @@ func (w *Worker) CreateStream() {
 	}
 }
 
-func (w *Worker) commitToDb(id uint32, res *contest.FinalResult) {
-	db.Database.RunInTx(w.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+func (w *worker) commitToDb(id uint32, res *result) {
+	logger.Panic(db.Database.RunInTx(w.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		if _, e := tx.NewUpdate().Model((*contest.Submission)(nil)).Where("id = ?", id).Set("result = ?", res).Returning("NULL").Exec(w.ctx); e != nil {
 			return e
 		}
 		return nil
-	})
+	}), "tx")
 }
 
-func (w *Worker) Enqueue(sub *Submission, t time.Time) error {
+func (w *worker) Enqueue(sub *Submission, t time.Time) error {
 	var e error
 	b, e := msgpack.Marshal(sub)
 	if e != nil {
@@ -218,23 +205,23 @@ func (w *Worker) Enqueue(sub *Submission, t time.Time) error {
 		amqp.Publishing{
 			Timestamp:     t,
 			ReplyTo:       name,
-			DeliveryMode:  amqp.Persistent,
+			DeliveryMode:  amqp.Transient,
 			CorrelationId: strconv.FormatUint(uint64(sub.ID), 10),
 			ContentType:   "application/msgpack",
 			Body:          b,
 		})
 	if e != nil {
 		w.env.DeleteStream(name)
+		return e
 	}
-	return stores.Pending.Set(w.ctx, sub.ID, 0, sub.TestCount, uint16(math.Ceil(float64(sub.Constraints.TimeLimit))))
-
+	return stores.Submissions.SetPending(w.ctx, sub.ID, 0, sub.TestCount, uint16(math.Ceil(float64(sub.Constraints.TimeLimit))))
 }
 
-func (w *Worker) Cancel(ctx context.Context, id uint32) error {
-	if !stores.Pending.IsPending(ctx, id) {
+func (w *worker) Cancel(ctx context.Context, id uint32) error {
+	if !stores.Submissions.IsPending(ctx, id) {
 		return errors.New("no submission with matching ID")
 	}
-	if tag, ok := stores.Pending.Get(ctx, id); ok {
+	if tag, ok := stores.Submissions.GetPendingTag(ctx, id); ok {
 		return w.mqChan.Reject(tag, false)
 	}
 	return errors.New("could not cancel specified submission")
@@ -242,25 +229,37 @@ func (w *Worker) Cancel(ctx context.Context, id uint32) error {
 
 // TODO: figure out a way to avoid race condition as two judges may judge a submission concurrently, wasting resources.
 
-func (w *Worker) consume(id uint32, name string) bool {
+func (w *worker) consume(id uint32, name string) bool {
 	lastNonAcVerdict := contest.None
 	_, e := w.env.NewConsumer(name, func(ctx stream.ConsumerContext, msg *amqp2.Message) {
 		var r res
 		if msgpack.Unmarshal(msg.Data[0], &r) != nil {
 			return
 		}
-		fmt.Println(r.Headers["from"])
-		if r.Headers["type"] == "final" {
+		switch r.Headers["type"] {
+		case "final":
 			ctx.Consumer.Close()
 			var _r FinalResult
 			if mapstructure.Decode(r.Body, &_r) != nil {
 				return
 			}
 			_r.LastNonACVerdict = lastNonAcVerdict
-			w.publish(id, _r, 0)
+			w.publish(id, math.MaxUint16, _r)
 			w.env.DeleteStream(name)
-			stores.Pending.Delete(w.ctx, id)
-		} else {
+			break
+		case "announcement":
+			if cid, ok := r.Body.(uint16); ok {
+				a := Announcement{
+					Type: "compile",
+					ID:   cid,
+				}
+				if cid > 0 {
+					a.Type = "case"
+				}
+				w.publish(id, cid, a)
+			}
+			break
+		default:
 			var _r CaseResult
 			if mapstructure.Decode(r.Body, &_r) != nil {
 				return
@@ -268,17 +267,19 @@ func (w *Worker) consume(id uint32, name string) bool {
 			if _r.Verdict != Accepted {
 				lastNonAcVerdict = resolveVerdict(_r.Verdict)
 			}
-			var ttl uint16 = 0
-			if _ttl, _ok := r.Headers["ttl"].(int32); _ok && _ttl > 0 {
-				ttl = uint16(_ttl)
+			var cid uint16 = math.MaxUint16
+			if _cid, _ok := r.Headers["case-id"].(int32); _ok {
+				cid = uint16(_cid)
 			}
-			w.publish(id, _r, ttl)
+			w.publish(id, cid, _r)
+			break
 		}
 	}, stream.NewConsumerOptions().SetOffset(stream.OffsetSpecification{}.First()).SetCRCCheck(false))
+	logger.Panic(e, "test")
 	return e == nil
 }
 
-func (w *Worker) Consume(id uint32, name string) error {
+func (w *worker) Consume(id uint32, name string) error {
 	if e, ok := w.pool.Process(consumeParams{
 		id:   id,
 		name: name,
@@ -288,7 +289,7 @@ func (w *Worker) Consume(id uint32, name string) error {
 	return nil
 }
 
-func (w *Worker) Reconnect() {
+func (w *worker) Reconnect() {
 	for {
 		select {
 		case <-w.errChan:
@@ -298,97 +299,72 @@ func (w *Worker) Reconnect() {
 	}
 }
 
-func (w *Worker) Work() {
+func (w *worker) Work() {
 	w.CreateStream()
 	w.Connect()
-	go w.Reconnect()
-	for {
-		select {
-		// on destroy
-		case id := <-w.dc:
-			stores.Pending.Delete(w.ctx, id)
-			a, ok := w.sm[id]
-			if !ok {
-				continue
-			}
-			for i := range a {
-				close(a[i])
-				a[i] = nil
-			}
-			w.sm[id] = nil
-			delete(w.sm, id)
-		// on sub
-		case s := <-w.sc:
-			w.sm[s.id] = append(w.sm[s.id], s.c)
-		// on unsub
-		case u := <-w.usc:
-			m, ok := w.sm[u.id]
-			if !ok {
-				continue
-			}
-			m = utils.ArrayRemove(m, func(r chan<- interface{}) bool {
-				if r == u.c {
-					close(u.c)
-					u.c = nil
-					return true
-				}
-				return false
-			})
-			w.sm[u.id] = m
-		// on pub
-		case msg := <-w.pc:
-			a, ok := w.sm[msg.id]
-			isFinal := false
-			if !ok {
-				continue
-			}
-			var d interface{} = nil
-			switch r := msg.data.(type) {
-			case CaseResult:
-				cr := contest.CaseResult{
-					Message:  r.Message,
-					Verdict:  resolveVerdict(r.Verdict),
-					Memory:   r.Memory,
-					Duration: r.Duration,
-				}
-				d = cr
-			case FinalResult:
-				fr := resolveFinalResult(r)
-				d = fr
-				w.commitToDb(msg.id, fr)
-				isFinal = true
-			}
-			if d != nil {
-				for i := range a {
-					select {
-					case a[i] <- d:
-					}
-				}
-			}
-			if isFinal {
-				w.DestroyObserver(msg.id)
+	w.Reconnect()
+}
+
+func (w *worker) publish(id uint32, cid uint16, data interface{}) {
+	subscribers, _ := w.sm.Get(id)
+	var d interface{} = nil
+	switch r := data.(type) {
+	case CaseResult:
+		cr := contest.CaseResult{
+			ID:       cid,
+			Message:  r.Message,
+			Verdict:  resolveVerdict(r.Verdict),
+			Memory:   r.Memory,
+			Duration: r.Duration,
+		}
+		stores.Submissions.UpdatePending(w.ctx, id, cr)
+		d = cr
+		break
+	case FinalResult:
+		fr := resolveFinalResult(r)
+		d = fr
+		w.commitToDb(id, &result{FinalResult: *fr, Cases: stores.Submissions.GetPendingResults(w.ctx, id)})
+		defer w.DestroySubscribers(id)
+		break
+	default:
+		d = data
+		break
+	}
+	if d != nil && len(subscribers) > 0 {
+		for i := range subscribers {
+			select {
+			case subscribers[i] <- d:
 			}
 		}
 	}
 }
 
-func (w *Worker) publish(id uint32, data interface{}, ttl uint16) {
-	w.pc <- result{id: id, data: data, ttl: ttl}
-}
-
-func (w *Worker) DestroyObserver(id uint32) {
-	w.dc <- id
-}
-
-func (w *Worker) Observe(id uint32, c chan<- interface{}) (s Subscription) {
-	s = Subscription{
-		id: id,
-		c:  c,
+func (w *worker) DestroySubscribers(id uint32) {
+	stores.Submissions.DeletePending(w.ctx, id)
+	a, ok := w.sm.Pop(id)
+	if !ok {
+		return
 	}
-	w.sc <- s
-	return
+	for i := range a {
+		close(a[i])
+		a[i] = nil
+	}
 }
 
-func (w *Worker) StopObserving(s Subscription) {
-	w.usc <- s
+func (w *worker) Subscribe(id uint32) chan interface{} {
+	c := make(chan interface{}, 1)
+	subscribers, _ := w.sm.Get(id)
+	w.sm.Set(id, append(subscribers, c))
+	return c
+}
+
+func (w *worker) Unsubscribe(id uint32, c chan interface{}) {
+	subscribers, ok := w.sm.Get(id)
+	if !ok {
+		return
+	}
+	close(c)
+	w.sm.Set(id, utils.ArrayRemove(subscribers, func(rc chan interface{}) bool {
+		return rc == c
+	}))
 }

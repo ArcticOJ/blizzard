@@ -11,18 +11,18 @@ import (
 func PurgeSubmissions(ctx context.Context) {
 	var sub []contest.Submission
 	if e := db.Database.NewSelect().Model(&sub).Column("id").Where("result IS ? AND submitted_at < NOW() - INTERVAL '30 MINUTE'", nil).Scan(ctx); e != nil {
-		logger.Blizzard.Error().Err(e).Msg("could not query for staled submissions")
+		logger.Blizzard.Error().Err(e).Msg("could not query for stale submissions")
 		return
 	}
 	var toPurge []contest.Submission
 	for i := range sub {
-		if !stores.Pending.IsPending(ctx, sub[i].ID) {
+		if !stores.Submissions.IsPending(ctx, sub[i].ID) {
 			toPurge = append(toPurge, sub[i])
 		}
 	}
 	if len(toPurge) > 0 {
 		if _, e := db.Database.NewDelete().Model(&toPurge).WherePK().Returning("NULL").Exec(ctx); e != nil {
-			logger.Blizzard.Error().Err(e).Msg("could not purge staled submissions")
+			logger.Blizzard.Error().Err(e).Msg("could not purge stale submissions")
 			return
 		}
 	}

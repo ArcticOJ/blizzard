@@ -1,7 +1,6 @@
 package http
 
 import (
-	"github.com/ArcticOJ/blizzard/v0/db/models/user"
 	"github.com/ArcticOJ/blizzard/v0/server/session"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -82,17 +81,6 @@ func (ctx Context) GetUUID() uuid.UUID {
 	}
 }
 
-func (ctx Context) GetUser() *user.MinimalUser {
-	_u := ctx.Get("user")
-	if _u == nil {
-		return nil
-	}
-	if u, ok := _u.(*user.MinimalUser); ok {
-		return u
-	}
-	return nil
-}
-
 func (ctx Context) PutCookie(name string, value string, exp time.Time, sessionOnly bool) {
 	cookie := new(http.Cookie)
 	cookie.Name = name
@@ -103,7 +91,7 @@ func (ctx Context) PutCookie(name string, value string, exp time.Time, sessionOn
 	cookie.SameSite = http.SameSiteLaxMode
 	cookie.Path = "/"
 	cookie.HttpOnly = true
-	cookie.Secure = true
+	//cookie.Secure = true
 	ctx.SetCookie(cookie)
 }
 

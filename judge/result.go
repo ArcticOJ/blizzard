@@ -5,7 +5,11 @@ import "github.com/ArcticOJ/blizzard/v0/db/models/contest"
 type (
 	CaseVerdict  int8
 	FinalVerdict int8
-	CaseResult   struct {
+	Announcement struct {
+		Type string `json:"type"`
+		ID   uint16 `json:"id,omitempty"`
+	}
+	CaseResult struct {
 		Duration float32
 		Memory   uint32
 		Message  string
@@ -14,6 +18,8 @@ type (
 	FinalResult struct {
 		CompilerOutput   string
 		Verdict          FinalVerdict
+		Points           float32
+		MaxPoints        float32
 		LastNonACVerdict contest.Verdict
 	}
 )

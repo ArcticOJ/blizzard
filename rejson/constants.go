@@ -1,6 +1,6 @@
 package rejson
 
-type Command string
+type Command = string
 
 const (
 	SET       Command = "JSON.SET"

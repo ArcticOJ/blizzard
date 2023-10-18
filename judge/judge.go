@@ -6,26 +6,34 @@ import (
 
 type (
 	Submission struct {
-		ID          uint32
-		SourcePath  string
-		Language    string
-		ProblemID   string
-		TestCount   uint16
-		Constraints *contest.Constraints
+		ID            uint32
+		SourcePath    string
+		Language      string
+		ProblemID     string
+		TestCount     uint16
+		PointsPerTest float32
+		Constraints   contest.Constraints
 	}
 )
 
 func resolveFinalResult(f FinalResult) *contest.FinalResult {
-	fres := &contest.FinalResult{
+	fr := &contest.FinalResult{
 		CompilerOutput: f.CompilerOutput,
 		Verdict:        contest.None,
+		Points:         f.Points,
+		MaxPoints:      f.MaxPoints,
 	}
 	if f.Verdict == ShortCircuit || f.Verdict == Normal {
 		var v contest.Verdict = contest.Accepted
 		if f.LastNonACVerdict != contest.None {
 			v = f.LastNonACVerdict
 		}
-		fres.Verdict = v
+		if f.Points > 0 && v != contest.Accepted {
+			v = contest.PartiallyAccepted
+		} else if v == contest.Accepted {
+			fr.Points = f.MaxPoints
+		}
+		fr.Verdict = v
 	} else {
 		v := contest.None
 		switch f.Verdict {
@@ -38,7 +46,7 @@ func resolveFinalResult(f FinalResult) *contest.FinalResult {
 		case CompileError:
 			v = contest.CompilerError
 		}
-		fres.Verdict = v
+		fr.Verdict = v
 	}
-	return fres
+	return fr
 }

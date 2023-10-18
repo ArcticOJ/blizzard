@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var Judge *JudgeStore
+var Judge *judgeStatusStore
 
 type (
 	JudgeStatus struct {
@@ -19,9 +19,6 @@ type (
 		Runtimes    []JudgeRuntime `json:"runtimes"`
 	}
 
-	JudgeInfo struct {
-	}
-
 	JudgeRuntime struct {
 		ID        string `json:"id"`
 		Compiler  string `json:"compiler"`
@@ -29,7 +26,7 @@ type (
 		Version   string `json:"version"`
 	}
 
-	JudgeStore struct {
+	judgeStatusStore struct {
 		c redis.UniversalClient
 	}
 )
@@ -41,10 +38,10 @@ const (
 )
 
 func init() {
-	Judge = &JudgeStore{c: cache.CreateClient(cache.Judge, "judge")}
+	Judge = &judgeStatusStore{c: cache.CreateClient(cache.Judge, "judge")}
 }
 
-func (s *JudgeStore) UpdateJudgeStatus(ctx context.Context, judgeList []interface{}, status string, allowedRuntimes []interface{}) {
+func (s *judgeStatusStore) UpdateJudgeStatus(ctx context.Context, judgeList []interface{}, status string, allowedRuntimes []interface{}) {
 	s.c.TxPipelined(ctx, func(p redis.Pipeliner) error {
 		s.c.Set(ctx, defaultJudgeStatusKey, status, time.Hour*24)
 		p.Del(ctx, defaultAllowedRuntimesKey).Err()
@@ -54,12 +51,12 @@ func (s *JudgeStore) UpdateJudgeStatus(ctx context.Context, judgeList []interfac
 	})
 }
 
-func (s *JudgeStore) IsRuntimeAllowed(ctx context.Context, runtime string) bool {
+func (s *judgeStatusStore) IsRuntimeAllowed(ctx context.Context, runtime string) bool {
 	v, e := s.c.SIsMember(ctx, defaultAllowedRuntimesKey, runtime).Result()
 	return v && e == nil
 }
 
-func (s *JudgeStore) GetJudgeList(ctx context.Context) []string {
+func (s *judgeStatusStore) GetJudgeList(ctx context.Context) []string {
 	v, e := s.c.SMembers(ctx, defaultJudgeListKey).Result()
 	if e != nil {
 		return nil
@@ -67,7 +64,7 @@ func (s *JudgeStore) GetJudgeList(ctx context.Context) []string {
 	return v
 }
 
-func (s *JudgeStore) GetJudgeStatus(ctx context.Context) []byte {
+func (s *judgeStatusStore) GetJudgeStatus(ctx context.Context) []byte {
 	status, e := s.c.Get(ctx, defaultJudgeStatusKey).Result()
 	if e != nil {
 		return []byte("null")
