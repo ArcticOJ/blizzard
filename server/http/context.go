@@ -99,9 +99,8 @@ func (ctx Context) DeleteCookie(name string) {
 	cookie := new(http.Cookie)
 	cookie.Name = name
 	cookie.Value = ""
-	cookie.Expires = time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
+	cookie.Expires = time.Unix(0, 0)
 	cookie.MaxAge = -1
-	cookie.SameSite = http.SameSiteLaxMode
 	cookie.Path = "/"
 	ctx.SetCookie(cookie)
 }
@@ -125,7 +124,11 @@ func (ctx Context) Authenticate(uid uuid.UUID, remember bool) Response {
 func (ctx Context) RequireAuth() bool {
 	authenticated := ctx.GetUUID() != uuid.Nil
 	if !authenticated {
-		ctx.CommitResponse(ctx.Unauthorized())
+		ctx.CommitResponse(ctx.Unauthenticated())
 	}
 	return !authenticated
+}
+
+func (ctx Context) Unauthenticated() Response {
+	return ctx.Err(403, "Unauthenticated.")
 }

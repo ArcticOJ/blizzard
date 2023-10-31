@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/ArcticOJ/blizzard/v0/oauth"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
-	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/ArcticOJ/blizzard/v0/utils/crypto"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/oauth2"
+	"slices"
 	"strings"
 )
 
@@ -20,7 +20,7 @@ func CreateUrl(ctx *http.Context) http.Response {
 		if ctx.QueryParam("remember") == "true" {
 			remember = 1
 		}
-		if !utils.ArrayIncludes(oauth.AllowedActions, action) {
+		if !slices.Contains(oauth.AllowedActions, action) {
 			return ctx.Bad("Invalid action.")
 		}
 		if action == "link" && ctx.RequireAuth() {

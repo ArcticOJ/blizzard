@@ -3,29 +3,37 @@ package judge
 import "github.com/ArcticOJ/blizzard/v0/db/models/contest"
 
 type (
-	CaseVerdict  int8
-	FinalVerdict int8
-	Announcement struct {
+	caseVerdict  int8
+	finalVerdict int8
+	announcement struct {
 		Type string `json:"type"`
 		ID   uint16 `json:"id,omitempty"`
 	}
-	CaseResult struct {
+	caseResult struct {
 		Duration float32
 		Memory   uint32
 		Message  string
-		Verdict  CaseVerdict
+		Verdict  caseVerdict
 	}
-	FinalResult struct {
+	// final result for deserializing response from judge
+	finalResult struct {
 		CompilerOutput   string
-		Verdict          FinalVerdict
-		Points           float32
-		MaxPoints        float32
+		Verdict          finalVerdict
+		Points           float64
+		MaxPoints        float64
 		LastNonACVerdict contest.Verdict
+	}
+	// final result for responding to clients
+	fResult struct {
+		CompilerOutput string          `json:"compilerOutput"`
+		Verdict        contest.Verdict `json:"verdict"`
+		Points         float64         `json:"points"`
+		MaxPoints      float64         `json:"maxPoints"`
 	}
 )
 
 const (
-	Accepted CaseVerdict = iota
+	Accepted caseVerdict = iota
 	WrongAnswer
 	InternalError
 	TimeLimitExceeded
@@ -35,7 +43,7 @@ const (
 )
 
 const (
-	Normal FinalVerdict = iota
+	Normal finalVerdict = iota
 	ShortCircuit
 	Rejected
 	Cancelled
@@ -43,7 +51,7 @@ const (
 	InitError
 )
 
-func resolveVerdict(v CaseVerdict) contest.Verdict {
+func resolveVerdict(v caseVerdict) contest.Verdict {
 	switch v {
 	case Accepted:
 		return contest.Accepted

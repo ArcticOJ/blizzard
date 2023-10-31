@@ -7,6 +7,10 @@ var Map = http.RouteMap{
 		Methods: []http.Method{http.Get},
 		Handler: Submissions,
 	},
+	"/:submission/source": {
+		Methods: []http.Method{http.Get},
+		Handler: Source,
+	},
 	"/:submission/cancel": {
 		Methods: []http.Method{http.Get},
 		Handler: CancelSubmission,

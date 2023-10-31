@@ -18,12 +18,4 @@ func Submission(ctx *http.Context) http.Response {
 		return ctx.NotFound("Submission not found.")
 	}
 	return ctx.Respond(s)
-	//_id, e := strconv.ParseUint(id, 10, 32)
-	//if e != nil {
-	//	return ctx.Bad("Invalid ID.")
-	//}
-	//if stores.Submissions.IsPending(ctx.Request().Context(), uint32(_id)) {
-	//
-	//}
-	//return ctx.Respond(id)
 }

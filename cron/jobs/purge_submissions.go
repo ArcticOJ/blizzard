@@ -10,7 +10,7 @@ import (
 
 func PurgeSubmissions(ctx context.Context) {
 	var sub []contest.Submission
-	if e := db.Database.NewSelect().Model(&sub).Column("id").Where("result IS ? AND submitted_at < NOW() - INTERVAL '30 MINUTE'", nil).Scan(ctx); e != nil {
+	if e := db.Database.NewSelect().Model(&sub).Column("id").Where("verdict = ? AND submitted_at < NOW() - INTERVAL '30 MINUTE'", "").Scan(ctx); e != nil {
 		logger.Blizzard.Error().Err(e).Msg("could not query for stale submissions")
 		return
 	}

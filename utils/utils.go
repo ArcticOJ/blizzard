@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
-	"os"
 	"strconv"
 )
 
@@ -14,33 +13,6 @@ func Rand(l uint8, fallback string) string {
 		return fallback
 	}
 	return hex.EncodeToString(bytes)
-}
-
-func ArrayIncludes[T comparable](arr []T, item T) bool {
-	for _, k := range arr {
-		if k == item {
-			return true
-		}
-	}
-	return false
-}
-
-func ArrayRemove[T any](arr []T, predicate func(T) bool) []T {
-	for i := range arr {
-		if predicate(arr[i]) {
-			return append(arr[:i], arr[i+1:]...)
-		}
-	}
-	return arr
-}
-
-func ArrayFind[T any](arr []T, predicate func(T) bool) bool {
-	for i := range arr {
-		if predicate(arr[i]) {
-			return true
-		}
-	}
-	return false
 }
 
 func ArrayFill[T any](val T, count int) (arr []T) {
@@ -74,21 +46,4 @@ func ParseInt(s string) int {
 		return 0
 	}
 	return v
-}
-
-func ReadFile(path string) []byte {
-	if b, e := os.ReadFile(path); e != nil {
-		return nil
-	} else {
-		return b
-	}
-}
-
-func ErrMulti(err ...error) error {
-	for i := range err {
-		if err[i] != nil {
-			return err[i]
-		}
-	}
-	return nil
 }

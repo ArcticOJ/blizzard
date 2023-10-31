@@ -6,6 +6,7 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/server/session"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"strings"
 )
 
 func Authentication() echo.MiddlewareFunc {
@@ -25,7 +26,7 @@ func Authentication() echo.MiddlewareFunc {
 				Context: c,
 			}
 			cookie, e := ctx.Cookie("session")
-			if e != nil || cookie == nil || cookie.Value == "" {
+			if e != nil || cookie == nil || strings.TrimSpace(cookie.Value) == "" {
 				return next(c)
 			}
 			if uid := session.Decrypt(cookie.Value); uid != uuid.Nil && stores.Users.UserExists(ctx.Request().Context(), uid) {

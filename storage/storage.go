@@ -6,13 +6,15 @@ import (
 	"os"
 )
 
-var Submission SubmissionStorage
+var (
+	Submission submissionStorage
+	READMEs    readmesStorage
+)
 
 func init() {
-	_s := config.Config.Storage
-	for _, s := range []string{_s.Posts, _s.READMEs, _s.Problems, _s.Submissions} {
+	for name, s := range config.Config.Storage {
 		if e := os.Mkdir(s, 0755); e != nil && !os.IsExist(e) {
-			logger.Blizzard.Fatal().Err(e).Msgf("error whilst creating %d", s)
+			logger.Blizzard.Fatal().Err(e).Msgf("error whilst creating storage for '%s'", name)
 		}
 	}
 }

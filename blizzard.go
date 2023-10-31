@@ -7,7 +7,7 @@ import (
 )
 
 func Init(ctx context.Context) {
-	judge.Worker = judge.NewWorker(ctx)
+	judge.Init(ctx)
 	cron.Start(ctx)
 	go judge.Worker.Work()
 }

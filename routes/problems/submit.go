@@ -4,15 +4,14 @@ package problems
 
 import (
 	"context"
-	"github.com/ArcticOJ/blizzard/v0/cache/stores"
 	"github.com/ArcticOJ/blizzard/v0/db"
 	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
 	"github.com/ArcticOJ/blizzard/v0/judge"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/ArcticOJ/blizzard/v0/storage"
-	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/google/uuid"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -73,12 +72,12 @@ func Submit(ctx *http.Context) http.Response {
 	if db.Database.NewSelect().Model(&problem).Where("id = ?", id).Scan(ctx.Request().Context()) != nil {
 		return ctx.NotFound("Problem not found.")
 	}
-	if len(problem.Constraints.AllowedLanguages) > 0 && !utils.ArrayIncludes(problem.Constraints.AllowedLanguages, lang) {
+	if len(problem.Constraints.AllowedLanguages) > 0 && !slices.Contains(problem.Constraints.AllowedLanguages, lang) {
 		return ctx.Bad("This language is not allowed by current problem.")
 	}
 	// might not be accurate
 	// TODO: group judges by supported runtimes and do icmp pings on demand
-	if !stores.Judge.IsRuntimeAllowed(ctx.Request().Context(), lang) {
+	if !judge.Worker.IsRuntimeSupported(lang) {
 		return ctx.InternalServerError("No judge server is available to handle this submission.")
 	}
 	dbSub, rollback, commit := createSubmission(ctx.Request().Context(), ctx.GetUUID(), problem.ID, lang, ext)

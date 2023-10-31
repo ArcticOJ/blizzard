@@ -8,12 +8,12 @@ import (
 
 func init() {
 	if config.Config.Debug {
-		amqp.SetLogger(DbgLogger{})
+		amqp.SetLogger(dbgLogger{})
 	}
 }
 
-type DbgLogger struct{}
+type dbgLogger struct{}
 
-func (DbgLogger) Printf(format string, v ...interface{}) {
+func (dbgLogger) Printf(format string, v ...interface{}) {
 	logger.Blizzard.Debug().Msgf(format, v)
 }

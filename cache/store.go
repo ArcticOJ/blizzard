@@ -15,7 +15,6 @@ const (
 	User DB = iota + 1
 	Bucket
 	Submission
-	Judge
 	Problem
 )
 

@@ -3,10 +3,13 @@ package user
 import "github.com/ArcticOJ/blizzard/v0/server/http"
 
 var Map = http.RouteMap{
-	// avoid conflict with other routes
-	"/info/:handle": {
+	"/:handle/info": {
 		Methods: []http.Method{http.Get},
 		Handler: Info,
+	},
+	"/:id/readme": {
+		Methods: []http.Method{http.Get},
+		Handler: Readme,
 	},
 	"/": {
 		Methods: []http.Method{http.Get, http.Post},

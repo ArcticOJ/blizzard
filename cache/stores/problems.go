@@ -35,15 +35,15 @@ func (s *problemStore) fallback(ctx context.Context, id string) *contest.Problem
 		if e := r.JSONSet(ctx, k, "$", prob); e != nil {
 			return e
 		}
-		return r.Expire(ctx, k, time.Hour*12).Err()
+		return r.Expire(ctx, k, time.Hour*48).Err()
 	})
 	return prob
 }
 
 func (s *problemStore) Get(ctx context.Context, id string) *contest.Problem {
 	p := s.j.JSONGet(ctx, fmt.Sprintf(defaultProblemKey, id))
-	//if p == nil {
-	//	return s.fallback(ctx, id)
-	//}
-	return rejson.Unmarshal[contest.Problem](p)
+	if r := rejson.Unmarshal[contest.Problem](p); r != nil {
+		return r
+	}
+	return s.fallback(ctx, id)
 }

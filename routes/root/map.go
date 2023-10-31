@@ -7,4 +7,8 @@ var Map = http.RouteMap{
 		Methods: []http.Method{http.Get},
 		Handler: Status,
 	},
+	"/version": {
+		Methods: []http.Method{http.Get},
+		Handler: Version,
+	},
 }

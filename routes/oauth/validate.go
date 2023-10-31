@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/labstack/echo/v4"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"slices"
 	"strings"
 )
 
@@ -70,7 +71,7 @@ func Validate(ctx *http.Context) http.Response {
 		}
 		action := utils.DecodeBase64ToString(state[0])
 		hash := utils.DecodeBase64ToBytes(state[1])
-		if !utils.ArrayIncludes(oauth.AllowedActions, action) {
+		if !slices.Contains(oauth.AllowedActions, action) {
 			return ctx.Bad("Invalid action, supported actions are: " + strings.Join(oauth.AllowedActions, ", "))
 		}
 		if hash == nil || (action != "link" && !hmac.Equal(crypto.Hash([]byte(action)), hash)) {

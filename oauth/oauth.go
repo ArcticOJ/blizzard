@@ -5,7 +5,7 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/config"
 	"github.com/ArcticOJ/blizzard/v0/oauth/providers"
 	"golang.org/x/oauth2"
-	"sort"
+	"slices"
 )
 
 var EnabledProviders []string
@@ -38,7 +38,5 @@ func init() {
 			}
 		}
 	}
-	sort.Slice(EnabledProviders, func(i, j int) bool {
-		return EnabledProviders[i] < EnabledProviders[j]
-	})
+	slices.Sort(EnabledProviders)
 }

@@ -5,9 +5,9 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/db"
 	"github.com/ArcticOJ/blizzard/v0/db/models/user"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
-	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"slices"
 	"strings"
 )
 
@@ -33,7 +33,7 @@ func Register(ctx *http.Context) http.Response {
 		return ctx.InternalServerError("Could not crypto provided password.")
 	}
 	handle := strings.TrimSpace(strings.ToLower(req.Handle))
-	if utils.ArrayIncludes(blacklistedHandles, handle) {
+	if slices.Contains(blacklistedHandles, handle) {
 		return ctx.Bad("Blacklisted handle, please try another one.")
 	}
 	_, err := db.Database.NewInsert().Model(&user.User{

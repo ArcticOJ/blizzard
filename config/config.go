@@ -8,53 +8,48 @@ import (
 )
 
 type (
-	BlizzardConfig struct {
-		Address    `yaml:",inline"`
+	storageType string
+	config      struct {
+		address    `yaml:",inline"`
+		Brand      string
 		PrivateKey string `yaml:"privateKey"`
 		Debug      bool   `yaml:"-"`
 		EnableCORS bool   `json:"enableCors"`
 		RateLimit  uint32 `yaml:"rateLimit"`
-		Database   DatabaseConfig
-		Storage    StorageConfig
-		Discord    *DiscordConfig
-		OAuth      map[string]OAuthProvider
-		Dragonfly  Address
-		RabbitMQ   RabbitMQConfig
+		Database   databaseConfig
+		Storage    map[storageType]string
+		Discord    *discordConfig
+		OAuth      map[string]oauthProvider
+		Dragonfly  address
+		RabbitMQ   rabbitMqConfig
 	}
 
-	DiscordConfig struct {
+	discordConfig struct {
 		Token string
 		Guild string
 	}
 
-	RabbitMQConfig struct {
+	rabbitMqConfig struct {
 		Username    string
 		Password    string
-		Address     `yaml:",inline"`
+		address     `yaml:",inline"`
 		ManagerPort uint16 `yaml:"managerPort"`
 		StreamPort  uint16 `yaml:"streamPort"`
 		VHost       string
 	}
 
-	Address struct {
+	address struct {
 		Host string
 		Port uint16
 	}
 
-	OAuthProvider struct {
+	oauthProvider struct {
 		ClientID     string `yaml:"clientId"`
 		ClientSecret string `yaml:"clientSecret"`
 	}
 
-	StorageConfig struct {
-		Problems    string
-		Posts       string
-		READMEs     string
-		Submissions string
-	}
-
-	DatabaseConfig struct {
-		Address  `yaml:",inline"`
+	databaseConfig struct {
+		address  `yaml:",inline"`
 		Username string
 		Password string
 		Name     string
@@ -62,7 +57,14 @@ type (
 	}
 )
 
-var Config BlizzardConfig
+var Config config
+
+const (
+	Problems    storageType = "problems"
+	Posts                   = "posts"
+	READMEs                 = "readmes"
+	Submissions             = "submissions"
+)
 
 func init() {
 	b, e := os.ReadFile("arctic.yml")

@@ -19,7 +19,6 @@ func init() {
 
 func Start(ctx context.Context) {
 	once.Do(func() {
-		sched.Every("3s").Do(jobs.UpdateJudgeStatus, ctx)
 		sched.Every("30m").Do(jobs.PurgeSubmissions, ctx)
 		sched.StartAsync()
 	})

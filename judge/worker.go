@@ -10,7 +10,6 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/db"
 	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
 	"github.com/ArcticOJ/blizzard/v0/logger"
-	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/Jeffail/tunny"
 	"github.com/mitchellh/mapstructure"
 	cmap "github.com/orcaman/concurrent-map/v2"
@@ -19,12 +18,12 @@ import (
 	"github.com/rabbitmq/rabbitmq-stream-go-client/pkg/stream"
 	"github.com/uptrace/bun"
 	"github.com/vmihailenco/msgpack"
-	"golang.org/x/sync/semaphore"
 	"math"
 	"net"
 	"net/http"
 	"net/url"
-	"runtime"
+	rt "runtime"
+	"slices"
 	"strconv"
 	"time"
 )
@@ -34,7 +33,6 @@ var Worker *worker
 type (
 	worker struct {
 		c   *http.Client
-		s   *semaphore.Weighted
 		ctx context.Context
 		// subscribers
 		// use nested hashmap for result chan for easier removal
@@ -64,19 +62,13 @@ type (
 		id   uint32
 		name string
 	}
-
-	result struct {
-		contest.FinalResult
-		Cases []contest.CaseResult `json:"cases"`
-	}
 )
 
-func NewWorker(ctx context.Context) (w *worker) {
-	w = &worker{
+func Init(ctx context.Context) {
+	Worker = &worker{
 		c: &http.Client{
 			Timeout: time.Second,
 		},
-		s:   semaphore.NewWeighted(int64(runtime.NumCPU())),
 		ctx: ctx,
 		sm: cmap.NewWithCustomShardingFunction[uint32, []chan interface{}](func(key uint32) uint32 {
 			return key
@@ -84,13 +76,12 @@ func NewWorker(ctx context.Context) (w *worker) {
 		errChan:    make(<-chan *amqp.Error, 1),
 		returnChan: make(<-chan amqp.Return, 1),
 	}
-	w.pool = tunny.NewFunc(runtime.NumCPU(), func(i interface{}) interface{} {
+	Worker.pool = tunny.NewFunc(rt.NumCPU(), func(i interface{}) interface{} {
 		if p, ok := i.(consumeParams); ok {
-			return w.consume(p.id, p.name)
+			return Worker.consume(p.id, p.name)
 		}
 		return nil
 	})
-	return
 }
 
 func (w *worker) Connect() {
@@ -143,8 +134,6 @@ func (w *worker) RecoverResults() {
 	}
 }
 
-// TODO: implement auto reconnect
-
 func (w *worker) CreateStream() {
 	var e error
 	conf := config.Config.RabbitMQ
@@ -160,12 +149,16 @@ func (w *worker) CreateStream() {
 	}
 }
 
-func (w *worker) commitToDb(id uint32, res *result) {
+func (w *worker) commitToDb(id uint32, cases []contest.CaseResult, fr finalResult, v contest.Verdict, p float64) {
 	logger.Panic(db.Database.RunInTx(w.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		if _, e := tx.NewUpdate().Model((*contest.Submission)(nil)).Where("id = ?", id).Set("result = ?", res).Returning("NULL").Exec(w.ctx); e != nil {
-			return e
-		}
-		return nil
+		_, e := tx.NewUpdate().Model(&contest.Submission{
+			ID:             id,
+			Results:        cases,
+			Verdict:        v,
+			Points:         p,
+			CompilerOutput: fr.CompilerOutput,
+		}).WherePK().Column("results", "verdict", "points", "compiler_output").Returning("NULL").Exec(w.ctx)
+		return e
 	}), "tx")
 }
 
@@ -239,7 +232,7 @@ func (w *worker) consume(id uint32, name string) bool {
 		switch r.Headers["type"] {
 		case "final":
 			ctx.Consumer.Close()
-			var _r FinalResult
+			var _r finalResult
 			if mapstructure.Decode(r.Body, &_r) != nil {
 				return
 			}
@@ -249,7 +242,7 @@ func (w *worker) consume(id uint32, name string) bool {
 			break
 		case "announcement":
 			if cid, ok := r.Body.(uint16); ok {
-				a := Announcement{
+				a := announcement{
 					Type: "compile",
 					ID:   cid,
 				}
@@ -260,7 +253,7 @@ func (w *worker) consume(id uint32, name string) bool {
 			}
 			break
 		default:
-			var _r CaseResult
+			var _r caseResult
 			if mapstructure.Decode(r.Body, &_r) != nil {
 				return
 			}
@@ -308,7 +301,7 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 	subscribers, _ := w.sm.Get(id)
 	var d interface{} = nil
 	switch r := data.(type) {
-	case CaseResult:
+	case caseResult:
 		cr := contest.CaseResult{
 			ID:       cid,
 			Message:  r.Message,
@@ -319,10 +312,15 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 		stores.Submissions.UpdatePending(w.ctx, id, cr)
 		d = cr
 		break
-	case FinalResult:
-		fr := resolveFinalResult(r)
-		d = fr
-		w.commitToDb(id, &result{FinalResult: *fr, Cases: stores.Submissions.GetPendingResults(w.ctx, id)})
+	case finalResult:
+		fv, p := getFinalVerdict(r)
+		d = fResult{
+			CompilerOutput: r.CompilerOutput,
+			Verdict:        fv,
+			Points:         p,
+			MaxPoints:      r.MaxPoints,
+		}
+		w.commitToDb(id, stores.Submissions.GetPendingResults(w.ctx, id), r, fv, p)
 		defer w.DestroySubscribers(id)
 		break
 	default:
@@ -363,7 +361,7 @@ func (w *worker) Unsubscribe(id uint32, c chan interface{}) {
 		return
 	}
 	close(c)
-	w.sm.Set(id, utils.ArrayRemove(subscribers, func(rc chan interface{}) bool {
+	w.sm.Set(id, slices.DeleteFunc(subscribers, func(rc chan interface{}) bool {
 		return rc == c
 	}))
 }

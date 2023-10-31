@@ -215,7 +215,7 @@ func (s *userStore) GetMinimal(ctx context.Context, id uuid.UUID) *user.MinimalU
 	if !s.UserExists(ctx, id) {
 		return nil
 	}
-	r := s.j.JSONGet(ctx, fmt.Sprintf(defaultUserKey, id), "")
+	r := s.j.JSONGet(ctx, fmt.Sprintf(defaultUserKey, id), "$..['id','displayName','handle','organization','avatar','topRole','rating']")
 	res := rejson.Unmarshal[[]interface{}](r)
 	if res == nil || len(*res) != 7 {
 		return userToMinimalUser(s.fallbackOne(ctx, id, ""))

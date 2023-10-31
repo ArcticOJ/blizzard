@@ -6,7 +6,7 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/logger/debug"
 	"github.com/ArcticOJ/blizzard/v0/oauth"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
-	"github.com/ArcticOJ/blizzard/v0/utils"
+	"slices"
 )
 
 func Unlink(ctx *http.Context) http.Response {
@@ -18,7 +18,7 @@ func Unlink(ctx *http.Context) http.Response {
 	if len(id) == 0 {
 		return ctx.Bad("Invalid ID.")
 	}
-	if utils.ArrayIncludes(oauth.EnabledProviders, prov) {
+	if slices.Contains(oauth.EnabledProviders, prov) {
 		if _, e := db.Database.NewDelete().Model((*user.OAuthConnection)(nil)).Where("id = ? AND provider = ?", id, prov).Returning("NULL").Exec(ctx.Request().Context()); e != nil {
 			debug.Dump(e)
 			return ctx.NotFound("OAuth connection not found.")
