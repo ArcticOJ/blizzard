@@ -5,10 +5,18 @@ import (
 	"github.com/ArcticOJ/polar/v0/types"
 )
 
+const (
+	typeAnnouncement responseType = "announcement"
+	typeCase                      = "case"
+	typeFinal                     = "final"
+)
+
 type (
-	announcement struct {
-		Type string `json:"type"`
-		ID   uint16 `json:"id,omitempty"`
+	responseType = string
+	// response with type to distinguish response types
+	response struct {
+		Type responseType `json:"type"`
+		Data interface{}  `json:"data"`
 	}
 	// final result for responding to clients
 	fResult struct {

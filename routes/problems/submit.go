@@ -77,6 +77,7 @@ func Submit(ctx *http.Context) http.Response {
 	rt := ctx.FormValue("runtime")
 	id := ctx.Param("problem")
 	var problem contest.Problem
+	// get file extension
 	ext := getExt(code.Filename)
 	f, e := code.Open()
 	if e != nil {
@@ -89,7 +90,7 @@ func Submit(ctx *http.Context) http.Response {
 		return ctx.NotFound("Problem not found.")
 	}
 	if len(problem.Constraints.AllowedRuntimes) > 0 && !slices.Contains(problem.Constraints.AllowedRuntimes, rt) {
-		return ctx.Bad("This language is not allowed by current problem.")
+		return ctx.Bad("This runtime is not allowed by current problem.")
 	}
 	if !judge.Worker.RuntimeSupported(rt) {
 		return ctx.InternalServerError("No judge server is available to handle this submission.")
@@ -98,7 +99,9 @@ func Submit(ctx *http.Context) http.Response {
 	if dbSub == nil {
 		return ctx.Bad("Failed to create submission!")
 	}
+	// generate a path for storing source code for this submission
 	p := storage.Submission.Create(dbSub.ID, ext)
+	// convert submission model to a polar-compatible one
 	sub := prepare(dbSub.ID, p, rt, dbSub.AuthorID, &problem)
 	if res, element, e = judge.Worker.Enqueue(sub, shouldStream, p, f); e != nil {
 		judge.Worker.DestroySubscribers(sub.ID)

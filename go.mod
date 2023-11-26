@@ -5,7 +5,7 @@ go 1.21
 require (
 	aidanwoods.dev/go-paseto v1.5.1
 	github.com/Jeffail/tunny v0.1.4
-	github.com/go-co-op/gocron/v2 v2.0.0-rc1
+	github.com/go-co-op/gocron/v2 v2.0.0-rc3
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/google/uuid v1.4.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa

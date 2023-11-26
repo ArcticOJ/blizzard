@@ -11,7 +11,6 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/logger"
 	"github.com/ArcticOJ/blizzard/v0/storage"
 	"github.com/ArcticOJ/polar/v0"
-	_ "github.com/ArcticOJ/polar/v0"
 	"github.com/ArcticOJ/polar/v0/types"
 	"github.com/Jeffail/tunny"
 	"github.com/google/uuid"
@@ -153,16 +152,7 @@ func (w *worker) handleResult(id uint32) func(t types.ResultType, data interface
 			w.publish(id, math.MaxUint16, _r)
 			return true
 		case types.ResultAnnouncement:
-			if cid, ok := data.(uint16); ok {
-				a := announcement{
-					Type: "compile",
-					ID:   cid,
-				}
-				if cid > 0 {
-					a.Type = "case"
-				}
-				w.publish(id, cid, a)
-			}
+			w.publish(id, math.MaxUint16, data.(uint16))
 		}
 		return false
 	}
@@ -179,7 +169,7 @@ func (w *worker) Consume(id uint32, name string) error {
 }
 
 func (w *worker) publish(id uint32, cid uint16, data interface{}) {
-	var d interface{} = nil
+	var d *response = nil
 	switch r := data.(type) {
 	case types.CaseResult:
 		cr := contest.CaseResult{
@@ -190,34 +180,38 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 			Duration: r.Duration,
 		}
 		w.p.UpdateResult(id, cr)
-		d = cr
-		break
+		d = &response{
+			Type: typeCase,
+			Data: cr,
+		}
 	case types.FinalResult:
 		fv, p := getFinalVerdict(r)
-		d = fResult{
-			CompilerOutput: r.CompilerOutput,
-			Verdict:        fv,
-			Points:         p,
-			MaxPoints:      r.MaxPoints,
+		d = &response{
+			Type: typeFinal,
+			Data: fResult{
+				CompilerOutput: r.CompilerOutput,
+				Verdict:        fv,
+				Points:         p,
+				MaxPoints:      r.MaxPoints,
+			},
 		}
 		w.commitToDb(id, w.p.GetResult(id), r, fv, p)
 		defer w.DestroySubscribers(id)
-		break
-	default:
-		d = data
-		break
-	}
-	if d != nil {
-		subscribers, ok := w.sm[id]
-		if ok {
-			subscribers.m.RLock()
-			for v := subscribers.l.Front(); v != nil; v = v.Next() {
-				select {
-				case v.Value.(chan interface{}) <- d:
-				}
-			}
-			subscribers.m.RUnlock()
+	case uint16:
+		d = &response{
+			Type: typeAnnouncement,
+			Data: data,
 		}
+	}
+	subscribers, ok := w.sm[id]
+	if ok {
+		subscribers.m.RLock()
+		for v := subscribers.l.Front(); v != nil; v = v.Next() {
+			select {
+			case v.Value.(chan interface{}) <- d:
+			}
+		}
+		subscribers.m.RUnlock()
 	}
 }
 
@@ -229,8 +223,10 @@ func (w *worker) DestroySubscribers(id uint32) {
 	subscribers.m.Lock()
 	delete(w.sm, id)
 	subscribers.m.Unlock()
+	// iterate over linked list and then close + delete all subscribers
 	for v := subscribers.l.Front(); v != nil; v = v.Next() {
 		close(v.Value.(chan interface{}))
+		subscribers.l.Remove(v)
 	}
 }
 
