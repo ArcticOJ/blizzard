@@ -21,9 +21,8 @@ func (s submissionStorage) Create(id uint32, ext string) string {
 }
 
 func (submissionStorage) Write(path string, f io.Reader) error {
-	file, e := os.Create(path)
+	file, e := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0755)
 	if e != nil {
-		panic(e)
 		return e
 	}
 	_, e = io.Copy(file, f)
