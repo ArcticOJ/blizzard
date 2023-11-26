@@ -203,15 +203,17 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 			Data: data,
 		}
 	}
-	subscribers, ok := w.sm[id]
-	if ok {
-		subscribers.m.RLock()
-		for v := subscribers.l.Front(); v != nil; v = v.Next() {
-			select {
-			case v.Value.(chan interface{}) <- d:
+	if d != nil {
+		subscribers, ok := w.sm[id]
+		if ok {
+			subscribers.m.RLock()
+			for v := subscribers.l.Front(); v != nil; v = v.Next() {
+				select {
+				case v.Value.(chan interface{}) <- d:
+				}
 			}
+			subscribers.m.RUnlock()
 		}
-		subscribers.m.RUnlock()
 	}
 }
 

@@ -72,7 +72,7 @@ func Submit(ctx *http.Context) http.Response {
 	code, e := ctx.FormFile("code")
 	shouldStream := ctx.FormValue("stream") == "true"
 	if e != nil {
-		return ctx.Bad("No code.")
+		return ctx.Bad("No source code.")
 	}
 	rt := ctx.FormValue("runtime")
 	id := ctx.Param("problem")
