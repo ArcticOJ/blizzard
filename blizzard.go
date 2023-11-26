@@ -9,7 +9,6 @@ import (
 func Init(ctx context.Context) {
 	judge.Init(ctx)
 	cron.Start(ctx)
-	go judge.Worker.Work()
 }
 
 func Destroy() {

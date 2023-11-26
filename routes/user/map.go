@@ -7,6 +7,10 @@ var Map = http.RouteMap{
 		Methods: []http.Method{http.Get},
 		Handler: Info,
 	},
+	"/:handle/hoverCard": {
+		Methods: []http.Method{http.Get},
+		Handler: HoverCard,
+	},
 	"/:id/readme": {
 		Methods: []http.Method{http.Get},
 		Handler: Readme,

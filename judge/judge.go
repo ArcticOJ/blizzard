@@ -2,43 +2,32 @@ package judge
 
 import (
 	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/polar/v0/types"
 )
 
-type (
-	Submission struct {
-		ID            uint32
-		SourcePath    string
-		Language      string
-		ProblemID     string
-		TestCount     uint16
-		PointsPerTest float64
-		Constraints   contest.Constraints
-	}
-)
-
-func getFinalVerdict(f finalResult) (v contest.Verdict, points float64) {
-	v = contest.None
+func getFinalVerdict(f types.FinalResult) (v contest.Verdict, points float64) {
+	v = contest.VerdictNone
 	points = f.Points
-	if f.Verdict == ShortCircuit || f.Verdict == Normal {
-		v = contest.Accepted
-		if f.LastNonACVerdict != contest.None {
-			v = f.LastNonACVerdict
+	if f.Verdict == types.FinalVerdictShortCircuit || f.Verdict == types.FinalVerdictNormal {
+		v = contest.VerdictAccepted
+		if f.LastNonACVerdict != types.CaseVerdictAccepted {
+			v = resolveVerdict(f.LastNonACVerdict)
 		}
-		if f.Points > 0 && v != contest.Accepted {
-			v = contest.PartiallyAccepted
-		} else if v == contest.Accepted {
+		if f.Points > 0 && v != contest.VerdictAccepted {
+			v = contest.VerdictPartiallyAccepted
+		} else if v == contest.VerdictAccepted {
 			points = f.MaxPoints
 		}
 	} else {
 		switch f.Verdict {
-		case Cancelled:
-			v = contest.Cancelled
-		case Rejected:
-			v = contest.Rejected
-		case InitError:
-			v = contest.InternalError
-		case CompileError:
-			v = contest.CompilerError
+		case types.FinalVerdictCancelled:
+			v = contest.VerdictCancelled
+		case types.FinalVerdictRejected:
+			v = contest.VerdictRejected
+		case types.FinalVerdictInitializationError:
+			v = contest.VerdictInternalError
+		case types.FinalCompileError:
+			v = contest.VerdictCompileError
 		}
 	}
 	return

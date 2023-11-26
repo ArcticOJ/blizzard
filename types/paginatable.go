@@ -1,7 +1,8 @@
 package types
 
 type Paginateable[T any] struct {
-	CurrentPage uint16 `json:"currentPage"`
-	PageSize    uint16 `json:"pageSize"`
+	Count       uint32 `json:"count"`
+	CurrentPage uint32 `json:"currentPage"`
+	PageSize    uint32 `json:"pageSize"`
 	Data        []T    `json:"data"`
 }

@@ -20,7 +20,7 @@ const (
 
 func CreateClient(db DB, name string) (c redis.UniversalClient) {
 	c = redis.NewClient(&redis.Options{
-		Addr: net.JoinHostPort(config.Config.Dragonfly.Host, fmt.Sprint(config.Config.Dragonfly.Port)),
+		Addr: net.JoinHostPort(config.Config.Blizzard.Dragonfly.Host, fmt.Sprint(config.Config.Blizzard.Dragonfly.Port)),
 		DB:   int(db),
 	})
 	if config.Config.Debug {

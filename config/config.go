@@ -10,37 +10,39 @@ import (
 type (
 	storageType string
 	config      struct {
-		address    `yaml:",inline"`
-		Brand      string
+		Host     string
+		Port     uint16
+		Brand    string
+		Blizzard blizzardConfig
+		Polar    polarConfig
+		Debug    bool `yaml:"-"`
+		Orca     orcaConfig
+	}
+
+	polarConfig struct {
+		Port     uint16
+		Password string
+	}
+
+	blizzardConfig struct {
 		PrivateKey string `yaml:"privateKey"`
-		Debug      bool   `yaml:"-"`
 		EnableCORS bool   `json:"enableCors"`
 		RateLimit  uint32 `yaml:"rateLimit"`
 		Database   databaseConfig
 		Storage    map[storageType]string
-		Discord    *discordConfig
 		OAuth      map[string]oauthProvider
-		Dragonfly  address
-		RabbitMQ   rabbitMqConfig
+		Dragonfly  dragonflyConfig
 	}
 
-	discordConfig struct {
+	orcaConfig struct {
 		Token string
 		Guild string
 	}
 
-	rabbitMqConfig struct {
-		Username    string
-		Password    string
-		address     `yaml:",inline"`
-		ManagerPort uint16 `yaml:"managerPort"`
-		StreamPort  uint16 `yaml:"streamPort"`
-		VHost       string
-	}
-
-	address struct {
-		Host string
-		Port uint16
+	dragonflyConfig struct {
+		Host     string
+		Port     uint16
+		Password string
 	}
 
 	oauthProvider struct {
@@ -49,7 +51,8 @@ type (
 	}
 
 	databaseConfig struct {
-		address  `yaml:",inline"`
+		Host     string
+		Port     uint16
 		Username string
 		Password string
 		Name     string

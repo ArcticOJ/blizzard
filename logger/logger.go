@@ -9,17 +9,19 @@ import (
 	"time"
 )
 
-var Global zerolog.Logger
-
-var Blizzard zerolog.Logger
-
-var Orca zerolog.Logger
+var (
+	Global   zerolog.Logger
+	Blizzard zerolog.Logger
+	Orca     zerolog.Logger
+	Polar    zerolog.Logger
+)
 
 func init() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
 	Global = createLogger("arctic")
 	Blizzard = createLogger("blizzard")
 	Orca = createLogger("orca")
+	Polar = createLogger("polar")
 }
 
 func createLogger(scope string) zerolog.Logger {

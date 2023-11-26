@@ -10,15 +10,19 @@ import (
 
 func Index(ctx *http.Context) http.Response {
 	page := ctx.QueryParam("page")
-	var p uint16 = 1
-	if _p, e := strconv.ParseUint(page, 10, 16); e == nil && _p > 0 {
-		p = uint16(_p)
+	var (
+		p     uint32 = 1
+		users []user.MinimalUser
+	)
+	if _p, e := strconv.ParseUint(page, 10, 32); e == nil && _p > 0 {
+		p = uint32(_p)
 	}
-	var users []user.MinimalUser
-	if users = stores.Users.GetPage(ctx.Request().Context(), p-1, ctx.QueryParam("reversed") == "true"); users == nil {
+	c := ctx.Request().Context()
+	if users = stores.Users.GetPage(c, p-1, ctx.QueryParam("reversed") == "true"); users == nil {
 		return ctx.InternalServerError("Could not fetch users.")
 	}
 	return ctx.Respond(types.Paginateable[user.MinimalUser]{
+		Count:       stores.Users.UserCount(c),
 		CurrentPage: p,
 		PageSize:    stores.DefaultUserPageSize,
 		Data:        users,

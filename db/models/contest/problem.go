@@ -28,22 +28,22 @@ type (
 	}
 
 	Constraints struct {
-		IsInteractive    bool     `bun:",default:false" json:"isInteractive"`
-		TimeLimit        float32  `bun:",default:1" json:"timeLimit"`
-		MemoryLimit      uint32   `bun:",default:128" json:"memoryLimit"`
-		OutputLimit      uint32   `bun:",default:64" json:"outputLimit"`
-		AllowPartial     bool     `bun:",default:false" json:"allowPartial"`
-		AllowedLanguages []string `bun:",array" json:"allowedLanguages"`
-		ShortCircuit     bool     `bun:",default:false" json:"shortCircuit"`
+		IsInteractive   bool     `bun:",default:false" json:"isInteractive"`
+		TimeLimit       float32  `bun:",default:1" json:"timeLimit"`
+		MemoryLimit     uint32   `bun:",default:128" json:"memoryLimit"`
+		OutputLimit     uint32   `bun:",default:64" json:"outputLimit"`
+		AllowPartial    bool     `bun:",default:false" json:"allowPartial"`
+		AllowedRuntimes []string `bun:",array" json:"allowedRuntimes"`
+		ShortCircuit    bool     `bun:",default:false" json:"shortCircuit"`
 	}
 
 	ContentType = string
 )
 
 const (
-	Structured ContentType = "structured"
-	PDF                    = "pdf"
-	Markdown               = "md"
-	URL                    = "url"
-	Image                  = "image"
+	ContentTypeStructured ContentType = "structured"
+	ContentTypePDF                    = "pdf"
+	ContentTypeMarkdown               = "md"
+	ContentTypeURL                    = "url"
+	ContentTypeImage                  = "image"
 )

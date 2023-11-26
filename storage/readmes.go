@@ -11,7 +11,7 @@ type readmesStorage struct {
 }
 
 func init() {
-	READMEs = readmesStorage{root: config.Config.Storage[config.READMEs]}
+	READMEs = readmesStorage{root: config.Config.Blizzard.Storage[config.READMEs]}
 }
 
 func (s readmesStorage) GetPath(uid uuid.UUID) string {

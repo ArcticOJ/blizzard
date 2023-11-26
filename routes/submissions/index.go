@@ -8,7 +8,7 @@ import (
 
 func Submissions(ctx *http.Context) http.Response {
 	var submissions []contest.Submission
-	if db.Database.NewSelect().Model(&submissions).Scan(ctx.Request().Context()) != nil {
+	if db.Database.NewSelect().Model(&submissions).Column("id", "runtime", "submitted_at", "verdict", "points", "problem_id", "time_taken", "total_memory").Scan(ctx.Request().Context()) != nil {
 		return ctx.InternalServerError("Could not fetch submissions.")
 	}
 	return ctx.Respond(submissions)

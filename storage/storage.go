@@ -12,7 +12,7 @@ var (
 )
 
 func init() {
-	for name, s := range config.Config.Storage {
+	for name, s := range config.Config.Blizzard.Storage {
 		if e := os.Mkdir(s, 0755); e != nil && !os.IsExist(e) {
 			logger.Blizzard.Fatal().Err(e).Msgf("error whilst creating storage for '%s'", name)
 		}

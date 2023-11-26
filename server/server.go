@@ -30,7 +30,7 @@ func createHandler(handler http.Handler) echo.HandlerFunc {
 
 func Register(e *echo.Echo) {
 	g := e.Group("/api", middlewares.Authentication())
-	if config.Config.RateLimit > 0 {
+	if config.Config.Blizzard.RateLimit > 0 {
 		g.Use(middlewares.RateLimit())
 	}
 	if config.Config.Debug {
@@ -54,18 +54,15 @@ func Register(e *echo.Echo) {
 		_g := g.Group(route)
 		// TODO: allow middlewares
 		for r, sub := range group {
-			for _, m := range sub.Methods {
-				method := m.ToString()
-				handler := createHandler(sub.Handler)
-				if route == "/" {
-					// add handler for root routes
-					g.Add(method, r, handler)
-				} else if r == "/" {
-					// handle apex routes
-					g.Add(method, route, handler)
-				} else {
-					_g.Add(method, r, handler)
-				}
+			handler := createHandler(sub.Handler)
+			if route == "/" {
+				// add handler for root routes like /api/user/index
+				g.Match(sub.Methods, r, handler)
+			} else if r == "/" {
+				// handle apex routes like /api/version
+				g.Match(sub.Methods, route, handler)
+			} else {
+				_g.Match(sub.Methods, r, handler)
 			}
 		}
 	}

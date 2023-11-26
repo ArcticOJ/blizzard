@@ -1,4 +1,4 @@
-package root
+package apex
 
 import (
 	"github.com/ArcticOJ/blizzard/v0/build"

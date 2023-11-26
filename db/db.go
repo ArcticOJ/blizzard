@@ -14,7 +14,7 @@ import (
 var Database *bun.DB
 
 func createDb() *bun.DB {
-	conf := config.Config.Database
+	conf := config.Config.Blizzard.Database
 	psql := sql.OpenDB(pgdriver.NewConnector(
 		pgdriver.WithUser(conf.Username),
 		pgdriver.WithPassword(conf.Password),

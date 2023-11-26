@@ -25,7 +25,7 @@ var UserInfoHandler = map[string]providers.UserInfoHandler{
 var AllowedActions = []string{"link", "register", "login"}
 
 func init() {
-	for name, provider := range config.Config.OAuth {
+	for name, provider := range config.Config.Blizzard.OAuth {
 		if c, ok := providerConf[name]; ok {
 			EnabledProviders = append(EnabledProviders, name)
 			Conf[name] = &oauth2.Config{

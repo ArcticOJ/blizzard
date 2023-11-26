@@ -1,61 +1,40 @@
 package judge
 
 import (
+	"container/list"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ArcticOJ/blizzard/v0/cache/stores"
-	"github.com/ArcticOJ/blizzard/v0/config"
+	"github.com/ArcticOJ/blizzard/v0/core/errs"
 	"github.com/ArcticOJ/blizzard/v0/db"
 	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
 	"github.com/ArcticOJ/blizzard/v0/logger"
+	"github.com/ArcticOJ/blizzard/v0/storage"
+	"github.com/ArcticOJ/polar/v0"
+	_ "github.com/ArcticOJ/polar/v0"
+	"github.com/ArcticOJ/polar/v0/types"
 	"github.com/Jeffail/tunny"
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
-	cmap "github.com/orcaman/concurrent-map/v2"
-	amqp "github.com/rabbitmq/amqp091-go"
-	amqp2 "github.com/rabbitmq/rabbitmq-stream-go-client/pkg/amqp"
-	"github.com/rabbitmq/rabbitmq-stream-go-client/pkg/stream"
 	"github.com/uptrace/bun"
-	"github.com/vmihailenco/msgpack"
+	"io"
 	"math"
-	"net"
-	"net/http"
-	"net/url"
-	rt "runtime"
-	"slices"
-	"strconv"
-	"time"
+	"sync"
 )
 
 var Worker *worker
 
 type (
 	worker struct {
-		c   *http.Client
 		ctx context.Context
 		// subscribers
-		// use nested hashmap for result chan for easier removal
-		sm cmap.ConcurrentMap[uint32, []chan interface{}]
-		// result message queue
-		errChan    <-chan *amqp.Error
-		returnChan <-chan amqp.Return
-		rmq        amqp.Queue
-		mqChan     *amqp.Channel
-		mqConn     *amqp.Connection
-		env        *stream.Environment
-		pool       *tunny.Pool
+		sm   map[uint32]*submissionSubscribers
+		p    *polar.Polar
+		pool *tunny.Pool
 	}
-
-	rmqApiResponse struct {
-		Destination string                 `json:"destination"`
-		Arguments   map[string]interface{} `json:"arguments"`
-		RoutingKey  string                 `json:"routing_key"`
-	}
-
-	res struct {
-		Headers map[string]interface{}
-		Body    interface{}
+	submissionSubscribers struct {
+		m sync.RWMutex
+		l *list.List
 	}
 
 	consumeParams struct {
@@ -64,184 +43,117 @@ type (
 	}
 )
 
+func getPendingSubmissions(ctx context.Context) (r []types.Submission) {
+	var s []contest.Submission
+	if db.Database.NewSelect().Model(&s).Relation("Problem", func(query *bun.SelectQuery) *bun.SelectQuery {
+		return query.ExcludeColumn("tags", "source", "author_id", "title", "content_type", "content")
+	}).Order("submitted_at DESC").Where("results IS ?", nil).Scan(ctx) != nil {
+		return nil
+	}
+	r = make([]types.Submission, len(s))
+	for i, _s := range s {
+		c := _s.Problem.Constraints
+		r[i] = types.Submission{
+			AuthorID:      _s.AuthorID.String(),
+			ID:            _s.ID,
+			SourcePath:    fmt.Sprintf("%d.%s", _s.ID, _s.Extension),
+			Runtime:       _s.Runtime,
+			ProblemID:     _s.ProblemID,
+			TestCount:     _s.Problem.TestCount,
+			PointsPerTest: _s.Problem.PointsPerTest,
+			Constraints: types.Constraints{
+				IsInteractive: c.IsInteractive,
+				TimeLimit:     c.TimeLimit,
+				MemoryLimit:   c.MemoryLimit,
+				OutputLimit:   c.OutputLimit,
+				AllowPartial:  c.AllowPartial,
+				ShortCircuit:  c.ShortCircuit,
+			},
+		}
+	}
+	return
+}
+
 func Init(ctx context.Context) {
 	Worker = &worker{
-		c: &http.Client{
-			Timeout: time.Second,
-		},
 		ctx: ctx,
-		sm: cmap.NewWithCustomShardingFunction[uint32, []chan interface{}](func(key uint32) uint32 {
-			return key
-		}),
-		errChan:    make(<-chan *amqp.Error, 1),
-		returnChan: make(<-chan amqp.Return, 1),
+		sm:  make(map[uint32]*submissionSubscribers),
 	}
-	Worker.pool = tunny.NewFunc(rt.NumCPU(), func(i interface{}) interface{} {
-		if p, ok := i.(consumeParams); ok {
-			return Worker.consume(p.id, p.name)
-		}
-		return nil
-	})
+	Worker.p = polar.NewPolar(ctx, Worker.handleResult)
+	Worker.p.Populate(getPendingSubmissions(ctx))
+	Worker.p.StartServer()
 }
 
-func (w *worker) Connect() {
-	var e error
-	if w.mqConn != nil {
-		w.mqConn.Close()
-		w.mqChan.Close()
+func (w *worker) commitToDb(id uint32, cases []contest.CaseResult, fr types.FinalResult, v contest.Verdict, p float64) {
+	s := contest.Submission{
+		ID:             id,
+		Results:        cases,
+		Verdict:        v,
+		Points:         p,
+		CompilerOutput: fr.CompilerOutput,
+		TotalMemory:    0,
+		TimeTaken:      0,
 	}
-	conf := config.Config.RabbitMQ
-	w.mqConn, e = amqp.DialConfig(fmt.Sprintf("amqp://%s:%s@%s", conf.Username, conf.Password, net.JoinHostPort(conf.Host, fmt.Sprint(conf.Port))), amqp.Config{
-		Heartbeat: time.Second,
-		Vhost:     conf.VHost,
-	})
-	logger.Panic(e, "failed to establish a connection to rabbitmq")
-	w.mqChan, e = w.mqConn.Channel()
-	logger.Panic(e, "failed to open a channel for queue")
-	logger.Panic(w.mqChan.ExchangeDeclare("submissions", "direct", true, false, false, false, amqp.Table{
-		"x-consumer-timeout": time.Hour.Milliseconds(),
-	}), "failed to declare exchange for submissions")
-	logger.Panic(w.mqChan.Qos(100, 0, false), "failed to set qos")
-	logger.Panic(w.mqChan.ExchangeDeclare("results", "direct", true, false, false, false, nil), "could not declare exchange for results")
-	//logger.Panic(w.mqChan.Confirm(false), "failed to put channel to confirm mode")
-	w.errChan = w.mqConn.NotifyClose(make(chan *amqp.Error, 1))
-	w.returnChan = w.mqChan.NotifyReturn(make(chan amqp.Return, 1))
-	w.RecoverResults()
-}
-
-func (w *worker) RecoverResults() {
-	conf := config.Config.RabbitMQ
-	req, _ := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/api/exchanges/%s/results/bindings/source", conf.Host, conf.ManagerPort, url.PathEscape(conf.VHost)), nil)
-	req.SetBasicAuth(conf.Username, conf.Password)
-	if r, e := w.c.Do(req); e == nil {
-		var mqr []rmqApiResponse
-		if json.NewDecoder(r.Body).Decode(&mqr) != nil {
-			return
-		}
-		for _, _r := range mqr {
-			_id, ok := _r.Arguments["x-id"]
-			if !ok || !stores.Submissions.IsPending(w.ctx, uint32(_id.(float64))) {
-				w.mqChan.QueueDelete(_r.Destination, true, false, true)
-			} else {
-				if _e := w.Consume(uint32(_id.(float64)), _r.Destination); e != nil {
-					logger.Blizzard.Error().Err(_e).Msgf("could not recover results for submission '%v'", _id)
-					continue
-				}
-			}
-		}
-	} else {
-		logger.Blizzard.Error().Err(e).Msg("failed to get available streams for results")
+	for _, r := range cases {
+		s.TotalMemory += uint64(r.Memory)
+		s.TimeTaken += r.Duration
 	}
-}
-
-func (w *worker) CreateStream() {
-	var e error
-	conf := config.Config.RabbitMQ
-	w.env, e = stream.NewEnvironment(
-		stream.NewEnvironmentOptions().
-			SetHost(conf.Host).
-			SetPort(int(conf.StreamPort)).
-			SetUser(conf.Username).
-			SetPassword(conf.Password).
-			SetVHost(conf.VHost))
-	if e != nil {
-		logger.Panic(e, "failed to start a stream connection")
-	}
-}
-
-func (w *worker) commitToDb(id uint32, cases []contest.CaseResult, fr finalResult, v contest.Verdict, p float64) {
 	logger.Panic(db.Database.RunInTx(w.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		_, e := tx.NewUpdate().Model(&contest.Submission{
-			ID:             id,
-			Results:        cases,
-			Verdict:        v,
-			Points:         p,
-			CompilerOutput: fr.CompilerOutput,
-		}).WherePK().Column("results", "verdict", "points", "compiler_output").Returning("NULL").Exec(w.ctx)
+		_, e := tx.NewUpdate().Model(&s).WherePK().Column("results", "verdict", "points", "compiler_output").Returning("NULL").Exec(w.ctx)
 		return e
 	}), "tx")
 }
 
-func (w *worker) Enqueue(sub *Submission, t time.Time) error {
-	var e error
-	b, e := msgpack.Marshal(sub)
-	if e != nil {
-		return e
+func (w *worker) Enqueue(sub types.Submission, subscribe bool, path string, f io.Reader) (chan interface{}, *list.Element, error) {
+	var (
+		c       chan interface{}
+		element *list.Element
+	)
+	if !w.p.RuntimeAvailable(sub.Runtime) {
+		return nil, nil, errs.JudgeNotAvailable
 	}
-	timestamp := time.Now().UTC().UnixMilli()
-	name := fmt.Sprintf("%d_%d", sub.ID, timestamp)
-	if e = w.env.DeclareStream(name, &stream.StreamOptions{
-		MaxAge: time.Hour * 24,
-	}); e != nil {
-		return e
+	if e := storage.Submission.Write(path, f); e != nil {
+		return nil, nil, e
 	}
-	e = w.mqChan.QueueBind(name, "", "results", false, amqp.Table{
-		"x-id":        int64(sub.ID),
-		"x-timestamp": timestamp,
-		"x-capacity":  int(sub.TestCount + 1),
-	})
-	if e != nil {
-		w.env.DeleteStream(name)
-		return e
-	}
-	e = w.Consume(sub.ID, name)
-	if e != nil {
-		w.env.DeleteStream(name)
-		return e
-	}
-	e = w.mqChan.PublishWithContext(
-		w.ctx,
-		"submissions",
-		sub.Language,
-		true,
-		false,
-		amqp.Publishing{
-			Timestamp:     t,
-			ReplyTo:       name,
-			DeliveryMode:  amqp.Transient,
-			CorrelationId: strconv.FormatUint(uint64(sub.ID), 10),
-			ContentType:   "application/msgpack",
-			Body:          b,
-		})
-	if e != nil {
-		w.env.DeleteStream(name)
-		return e
-	}
-	return stores.Submissions.SetPending(w.ctx, sub.ID, 0, sub.TestCount, uint16(math.Ceil(float64(sub.Constraints.TimeLimit))))
-}
-
-func (w *worker) Cancel(ctx context.Context, id uint32) error {
-	if !stores.Submissions.IsPending(ctx, id) {
-		return errors.New("no submission with matching ID")
-	}
-	if tag, ok := stores.Submissions.GetPendingTag(ctx, id); ok {
-		return w.mqChan.Reject(tag, false)
-	}
-	return errors.New("could not cancel specified submission")
-}
-
-// TODO: figure out a way to avoid race condition as two judges may judge a submission concurrently, wasting resources.
-
-func (w *worker) consume(id uint32, name string) bool {
-	lastNonAcVerdict := contest.None
-	_, e := w.env.NewConsumer(name, func(ctx stream.ConsumerContext, msg *amqp2.Message) {
-		var r res
-		if msgpack.Unmarshal(msg.Data[0], &r) != nil {
-			return
+	if subscribe {
+		w.sm[sub.ID] = &submissionSubscribers{
+			l: list.New(),
 		}
-		switch r.Headers["type"] {
-		case "final":
-			ctx.Consumer.Close()
-			var _r finalResult
-			if mapstructure.Decode(r.Body, &_r) != nil {
-				return
+		c, element = w.Subscribe(sub.ID)
+	}
+	return c, element, w.p.Push(sub, false)
+}
+
+func (w *worker) Cancel(id uint32, userId uuid.UUID) error {
+	if !w.p.Cancel(id, userId.String()) {
+		return errors.New("could not cancel specified submission")
+	}
+	return nil
+}
+
+func (w *worker) handleResult(id uint32) func(t types.ResultType, data interface{}) bool {
+	lastNonAcVerdict := types.CaseVerdictAccepted
+	return func(t types.ResultType, data interface{}) bool {
+		switch t {
+		case types.ResultCase:
+			var _r types.CaseResult
+			if mapstructure.Decode(data, &_r) != nil {
+				return false
+			}
+			if _r.Verdict != types.CaseVerdictAccepted {
+				lastNonAcVerdict = _r.Verdict
+			}
+			w.publish(id, _r.CaseID, _r)
+		case types.ResultFinal:
+			var _r types.FinalResult
+			if mapstructure.Decode(data, &_r) != nil {
+				return false
 			}
 			_r.LastNonACVerdict = lastNonAcVerdict
 			w.publish(id, math.MaxUint16, _r)
-			w.env.DeleteStream(name)
-			break
-		case "announcement":
-			if cid, ok := r.Body.(uint16); ok {
+			return true
+		case types.ResultAnnouncement:
+			if cid, ok := data.(uint16); ok {
 				a := announcement{
 					Type: "compile",
 					ID:   cid,
@@ -251,24 +163,9 @@ func (w *worker) consume(id uint32, name string) bool {
 				}
 				w.publish(id, cid, a)
 			}
-			break
-		default:
-			var _r caseResult
-			if mapstructure.Decode(r.Body, &_r) != nil {
-				return
-			}
-			if _r.Verdict != Accepted {
-				lastNonAcVerdict = resolveVerdict(_r.Verdict)
-			}
-			var cid uint16 = math.MaxUint16
-			if _cid, _ok := r.Headers["case-id"].(int32); _ok {
-				cid = uint16(_cid)
-			}
-			w.publish(id, cid, _r)
-			break
 		}
-	}, stream.NewConsumerOptions().SetOffset(stream.OffsetSpecification{}.First()).SetCRCCheck(false))
-	return e == nil
+		return false
+	}
 }
 
 func (w *worker) Consume(id uint32, name string) error {
@@ -281,27 +178,10 @@ func (w *worker) Consume(id uint32, name string) error {
 	return nil
 }
 
-func (w *worker) Reconnect() {
-	for {
-		select {
-		case <-w.errChan:
-			logger.Blizzard.Debug().Msg("reconnect")
-			w.Connect()
-		}
-	}
-}
-
-func (w *worker) Work() {
-	w.CreateStream()
-	w.Connect()
-	w.Reconnect()
-}
-
 func (w *worker) publish(id uint32, cid uint16, data interface{}) {
-	subscribers, _ := w.sm.Get(id)
 	var d interface{} = nil
 	switch r := data.(type) {
-	case caseResult:
+	case types.CaseResult:
 		cr := contest.CaseResult{
 			ID:       cid,
 			Message:  r.Message,
@@ -309,10 +189,10 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 			Memory:   r.Memory,
 			Duration: r.Duration,
 		}
-		stores.Submissions.UpdatePending(w.ctx, id, cr)
+		w.p.UpdateResult(id, cr)
 		d = cr
 		break
-	case finalResult:
+	case types.FinalResult:
 		fv, p := getFinalVerdict(r)
 		d = fResult{
 			CompilerOutput: r.CompilerOutput,
@@ -320,48 +200,66 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 			Points:         p,
 			MaxPoints:      r.MaxPoints,
 		}
-		w.commitToDb(id, stores.Submissions.GetPendingResults(w.ctx, id), r, fv, p)
+		w.commitToDb(id, w.p.GetResult(id), r, fv, p)
 		defer w.DestroySubscribers(id)
 		break
 	default:
 		d = data
 		break
 	}
-	if d != nil && len(subscribers) > 0 {
-		for i := range subscribers {
-			select {
-			case subscribers[i] <- d:
+	if d != nil {
+		subscribers, ok := w.sm[id]
+		if ok {
+			subscribers.m.RLock()
+			for v := subscribers.l.Front(); v != nil; v = v.Next() {
+				select {
+				case v.Value.(chan interface{}) <- d:
+				}
 			}
+			subscribers.m.RUnlock()
 		}
 	}
 }
 
 func (w *worker) DestroySubscribers(id uint32) {
-	stores.Submissions.DeletePending(w.ctx, id)
-	a, ok := w.sm.Pop(id)
+	subscribers, ok := w.sm[id]
 	if !ok {
 		return
 	}
-	for i := range a {
-		close(a[i])
-		a[i] = nil
+	subscribers.m.Lock()
+	delete(w.sm, id)
+	subscribers.m.Unlock()
+	for v := subscribers.l.Front(); v != nil; v = v.Next() {
+		close(v.Value.(chan interface{}))
 	}
 }
 
-func (w *worker) Subscribe(id uint32) chan interface{} {
+func (w *worker) Subscribe(id uint32) (chan interface{}, *list.Element) {
+	subscribers, ok := w.sm[id]
+	if !ok {
+		return nil, nil
+	}
+	subscribers.m.Lock()
+	defer subscribers.m.Unlock()
 	c := make(chan interface{}, 1)
-	subscribers, _ := w.sm.Get(id)
-	w.sm.Set(id, append(subscribers, c))
-	return c
+	return c, subscribers.l.PushBack(c)
 }
 
-func (w *worker) Unsubscribe(id uint32, c chan interface{}) {
-	subscribers, ok := w.sm.Get(id)
+func (w *worker) Unsubscribe(id uint32, e *list.Element) {
+	subscribers, ok := w.sm[id]
 	if !ok {
 		return
 	}
-	close(c)
-	w.sm.Set(id, slices.DeleteFunc(subscribers, func(rc chan interface{}) bool {
-		return rc == c
-	}))
+	subscribers.m.Lock()
+	defer subscribers.m.Unlock()
+	close(e.Value.(chan interface{}))
+	subscribers.l.Remove(e)
+}
+
+func (w *worker) RuntimeSupported(rt string) bool {
+	return w.p.RuntimeAvailable(rt)
+}
+
+func (w *worker) GetJudges() map[string]*polar.JudgeObj {
+	return w.p.GetJudges()
 }

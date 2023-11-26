@@ -2,29 +2,15 @@ package http
 
 import "net/http"
 
-type Method int
+type Method = string
 
 const (
-	Get Method = iota
-	Post
-	Patch
-	Delete
-	Put
+	Get    Method = http.MethodGet
+	Post          = http.MethodPost
+	Patch         = http.MethodPatch
+	Delete        = http.MethodDelete
+	Put           = http.MethodPut
 )
-
-func (method Method) ToString() string {
-	switch method {
-	case Post:
-		return http.MethodPost
-	case Patch:
-		return http.MethodPatch
-	case Delete:
-		return http.MethodDelete
-	case Put:
-		return http.MethodPut
-	}
-	return http.MethodGet
-}
 
 func MethodFromString(method string) Method {
 	switch method {

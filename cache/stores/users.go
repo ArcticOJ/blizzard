@@ -232,7 +232,11 @@ func (s *userStore) GetMinimal(ctx context.Context, id uuid.UUID) *user.MinimalU
 	}
 }
 
-func (s *userStore) GetPage(ctx context.Context, page uint16, rev bool) (res []user.MinimalUser) {
+func (s *userStore) UserCount(ctx context.Context) uint32 {
+	return uint32(s.j.ZCard(ctx, defaultUserListKey).Val())
+}
+
+func (s *userStore) GetPage(ctx context.Context, page uint32, rev bool) (res []user.MinimalUser) {
 	order := "desc"
 	if rev {
 		order = "asc"

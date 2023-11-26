@@ -1,4 +1,4 @@
-package root
+package apex
 
 import (
 	"github.com/ArcticOJ/blizzard/v0/judge"
@@ -6,5 +6,5 @@ import (
 )
 
 func Status(ctx *http.Context) http.Response {
-	return ctx.Respond(judge.Worker.GetStatus())
+	return ctx.Respond(judge.Worker.GetJudges())
 }

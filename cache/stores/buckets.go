@@ -23,7 +23,7 @@ func init() {
 }
 
 func (s *rateLimitStore) Limit(ctx context.Context, ip string) (allowed bool, totalLimit, remaining, retryAfter, nextReset int64) {
-	v, e := s.c.Do(ctx, "CL.THROTTLE", fmt.Sprintf(defaultBucketKey, ip), uint16(math.Max(math.Ceil(float64(config.Config.RateLimit)/2), 1)), config.Config.RateLimit, 30, 1).Int64Slice()
+	v, e := s.c.Do(ctx, "CL.THROTTLE", fmt.Sprintf(defaultBucketKey, ip), uint16(math.Max(math.Ceil(float64(config.Config.Blizzard.RateLimit)/2), 1)), config.Config.Blizzard.RateLimit, 30, 1).Int64Slice()
 	if e != nil || len(v) != 5 {
 		logger.Blizzard.Err(e).Msgf("failed to process rate limit for '%s'", ip)
 		return false, 0, 0, 0, 0
