@@ -12,8 +12,8 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/storage"
 	"github.com/ArcticOJ/polar/v0"
 	"github.com/ArcticOJ/polar/v0/types"
-	"github.com/Jeffail/tunny"
 	"github.com/google/uuid"
+	csmap "github.com/mhmtszr/concurrent-swiss-map"
 	"github.com/mitchellh/mapstructure"
 	"github.com/uptrace/bun"
 	"io"
@@ -27,18 +27,12 @@ type (
 	worker struct {
 		ctx context.Context
 		// subscribers
-		sm   map[uint32]*submissionSubscribers
-		p    *polar.Polar
-		pool *tunny.Pool
+		sm *csmap.CsMap[uint32, *submissionSubscribers]
+		p  *polar.Polar
 	}
 	submissionSubscribers struct {
 		m sync.RWMutex
 		l *list.List
-	}
-
-	consumeParams struct {
-		id   uint32
-		name string
 	}
 )
 
@@ -76,7 +70,7 @@ func getPendingSubmissions(ctx context.Context) (r []types.Submission) {
 func Init(ctx context.Context) {
 	Worker = &worker{
 		ctx: ctx,
-		sm:  make(map[uint32]*submissionSubscribers),
+		sm:  csmap.Create[uint32, *submissionSubscribers](),
 	}
 	Worker.p = polar.NewPolar(ctx, Worker.handleResult)
 	Worker.p.Populate(getPendingSubmissions(ctx))
@@ -114,10 +108,10 @@ func (w *worker) Enqueue(sub types.Submission, subscribe bool, path string, f io
 	if e := storage.Submission.Write(path, f); e != nil {
 		return nil, nil, e
 	}
+	w.sm.Store(sub.ID, &submissionSubscribers{
+		l: list.New(),
+	})
 	if subscribe {
-		w.sm[sub.ID] = &submissionSubscribers{
-			l: list.New(),
-		}
 		c, element = w.Subscribe(sub.ID)
 	}
 	return c, element, w.p.Push(sub, false)
@@ -158,16 +152,6 @@ func (w *worker) handleResult(id uint32) func(t types.ResultType, data interface
 	}
 }
 
-func (w *worker) Consume(id uint32, name string) error {
-	if e, ok := w.pool.Process(consumeParams{
-		id:   id,
-		name: name,
-	}).(bool); ok && !e {
-		return fmt.Errorf("could not start consuming queue '%s'", name)
-	}
-	return nil
-}
-
 func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 	var d *response = nil
 	switch r := data.(type) {
@@ -204,7 +188,7 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 		}
 	}
 	if d != nil {
-		subscribers, ok := w.sm[id]
+		subscribers, ok := w.sm.Load(id)
 		if ok {
 			subscribers.m.RLock()
 			for v := subscribers.l.Front(); v != nil; v = v.Next() {
@@ -218,12 +202,12 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 }
 
 func (w *worker) DestroySubscribers(id uint32) {
-	subscribers, ok := w.sm[id]
+	subscribers, ok := w.sm.Load(id)
 	if !ok {
 		return
 	}
 	subscribers.m.Lock()
-	delete(w.sm, id)
+	w.sm.Delete(id)
 	subscribers.m.Unlock()
 	// iterate over linked list and then close + delete all subscribers
 	for v := subscribers.l.Front(); v != nil; v = v.Next() {
@@ -233,7 +217,7 @@ func (w *worker) DestroySubscribers(id uint32) {
 }
 
 func (w *worker) Subscribe(id uint32) (chan interface{}, *list.Element) {
-	subscribers, ok := w.sm[id]
+	subscribers, ok := w.sm.Load(id)
 	if !ok {
 		return nil, nil
 	}
@@ -244,7 +228,7 @@ func (w *worker) Subscribe(id uint32) (chan interface{}, *list.Element) {
 }
 
 func (w *worker) Unsubscribe(id uint32, e *list.Element) {
-	subscribers, ok := w.sm[id]
+	subscribers, ok := w.sm.Load(id)
 	if !ok {
 		return
 	}

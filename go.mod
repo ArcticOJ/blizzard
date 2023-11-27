@@ -4,13 +4,13 @@ go 1.21
 
 require (
 	aidanwoods.dev/go-paseto v1.5.1
-	github.com/Jeffail/tunny v0.1.4
 	github.com/go-co-op/gocron/v2 v2.0.0-rc3
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/google/uuid v1.4.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/labstack/echo/v4 v4.11.3
 	github.com/matthewhartstonge/argon2 v0.3.4
+	github.com/mhmtszr/concurrent-swiss-map v1.0.5
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ravener/discord-oauth2 v0.0.0-20230514095040-ae65713199b3
 	github.com/redis/go-redis/v9 v9.3.0
