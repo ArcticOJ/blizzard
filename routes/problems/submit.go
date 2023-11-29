@@ -113,12 +113,18 @@ func Submit(ctx *http.Context) http.Response {
 	}
 	if shouldStream && res != nil {
 		stream := ctx.StreamResponse()
-		go func() {
-			<-ctx.Request().Context().Done()
-			judge.Worker.Unsubscribe(sub.ID, element)
-		}()
-		for r := range res {
-			stream.Write(r)
+		done := ctx.Request().Context().Done()
+		for {
+			select {
+			case <-done:
+				judge.Worker.Unsubscribe(sub.ID, element)
+				return nil
+			case r, more := <-res:
+				if !more {
+					return nil
+				}
+				stream.Write(r)
+			}
 		}
 		return ctx.Success()
 	} else {

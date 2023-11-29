@@ -112,7 +112,7 @@ func (w *worker) Enqueue(sub types.Submission, subscribe bool, path string, f io
 		l: list.New(),
 	})
 	if subscribe {
-		c, element = w.Subscribe(sub.ID)
+		c, element = w.Subscribe(sub)
 	}
 	return c, element, w.p.Push(sub, false)
 }
@@ -216,14 +216,15 @@ func (w *worker) DestroySubscribers(id uint32) {
 	}
 }
 
-func (w *worker) Subscribe(id uint32) (chan interface{}, *list.Element) {
-	subscribers, ok := w.sm.Load(id)
+func (w *worker) Subscribe(sub types.Submission) (chan interface{}, *list.Element) {
+	subscribers, ok := w.sm.Load(sub.ID)
 	if !ok {
 		return nil, nil
 	}
 	subscribers.m.Lock()
 	defer subscribers.m.Unlock()
-	c := make(chan interface{}, 1)
+	// maximum number of messages = compile announcement + n test case announcements + n test case results + final result = (n + 1) * 2
+	c := make(chan interface{}, (sub.TestCount+1)*2)
 	return c, subscribers.l.PushBack(c)
 }
 

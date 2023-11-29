@@ -31,7 +31,7 @@ func createHandler(handler http.Handler) echo.HandlerFunc {
 func Register(e *echo.Echo) {
 	g := e.Group("/api", middlewares.Authentication())
 	if config.Config.Blizzard.RateLimit > 0 {
-		g.Use(middlewares.RateLimit())
+		//g.Use(middlewares.RateLimit())
 	}
 	if config.Config.Debug {
 		g.Use(middleware.BodyDump(func(c echo.Context, req, res []byte) {
