@@ -4,29 +4,26 @@ import (
 	"container/list"
 	"context"
 	"errors"
-	"fmt"
-	"github.com/ArcticOJ/blizzard/v0/core/errs"
 	"github.com/ArcticOJ/blizzard/v0/db"
-	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/contest"
 	"github.com/ArcticOJ/blizzard/v0/logger"
-	"github.com/ArcticOJ/blizzard/v0/storage"
 	"github.com/ArcticOJ/polar/v0"
 	"github.com/ArcticOJ/polar/v0/types"
 	"github.com/google/uuid"
 	csmap "github.com/mhmtszr/concurrent-swiss-map"
 	"github.com/mitchellh/mapstructure"
 	"github.com/uptrace/bun"
-	"io"
 	"math"
 	"sync"
 )
 
-var Worker *worker
+var Observer *observer
 
 type (
-	worker struct {
+	observer struct {
 		ctx context.Context
 		// subscribers
+		m  sync.RWMutex
 		sm *csmap.CsMap[uint32, *submissionSubscribers]
 		p  *polar.Polar
 	}
@@ -40,7 +37,7 @@ func getPendingSubmissions(ctx context.Context) (r []types.Submission) {
 	var s []contest.Submission
 	if db.Database.NewSelect().Model(&s).Relation("Problem", func(query *bun.SelectQuery) *bun.SelectQuery {
 		return query.ExcludeColumn("tags", "source", "author_id", "title", "content_type", "content")
-	}).Order("submitted_at DESC").Where("results IS ?", nil).Scan(ctx) != nil {
+	}).Order("submitted_at DESC").Where("verdict = ?", "").Scan(ctx) != nil {
 		return nil
 	}
 	r = make([]types.Submission, len(s))
@@ -49,7 +46,7 @@ func getPendingSubmissions(ctx context.Context) (r []types.Submission) {
 		r[i] = types.Submission{
 			AuthorID:      _s.AuthorID.String(),
 			ID:            _s.ID,
-			SourcePath:    fmt.Sprintf("%d.%s", _s.ID, _s.Extension),
+			SourcePath:    _s.FileName,
 			Runtime:       _s.Runtime,
 			ProblemID:     _s.ProblemID,
 			TestCount:     _s.Problem.TestCount,
@@ -68,16 +65,18 @@ func getPendingSubmissions(ctx context.Context) (r []types.Submission) {
 }
 
 func Init(ctx context.Context) {
-	Worker = &worker{
+	Observer = &observer{
 		ctx: ctx,
-		sm:  csmap.Create[uint32, *submissionSubscribers](),
+		sm: csmap.Create[uint32, *submissionSubscribers](csmap.WithCustomHasher[uint32, *submissionSubscribers](func(key uint32) uint64 {
+			return uint64(key)
+		}), csmap.WithShardCount[uint32, *submissionSubscribers](1)),
 	}
-	Worker.p = polar.NewPolar(ctx, Worker.handleResult)
-	Worker.p.Populate(getPendingSubmissions(ctx))
-	Worker.p.StartServer()
+	Observer.p = polar.NewPolar(ctx, Observer.handleResult)
+	Observer.p.Populate(getPendingSubmissions(ctx))
+	Observer.p.StartServer()
 }
 
-func (w *worker) commitToDb(id uint32, cases []contest.CaseResult, fr types.FinalResult, v contest.Verdict, p float64) {
+func (o *observer) commitToDb(id uint32, cases []contest.CaseResult, fr types.FinalResult, v contest.Verdict, p float64) {
 	s := contest.Submission{
 		ID:             id,
 		Results:        cases,
@@ -91,40 +90,35 @@ func (w *worker) commitToDb(id uint32, cases []contest.CaseResult, fr types.Fina
 		s.TotalMemory += uint64(r.Memory)
 		s.TimeTaken += r.Duration
 	}
-	logger.Panic(db.Database.RunInTx(w.ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		_, e := tx.NewUpdate().Model(&s).WherePK().Column("results", "verdict", "points", "compiler_output").Returning("NULL").Exec(w.ctx)
-		return e
-	}), "tx")
+	if _, e := db.Database.NewUpdate().Model(&s).WherePK().Column("results", "verdict", "points", "compiler_output").Returning("NULL").Exec(o.ctx); e != nil {
+		logger.Blizzard.Error().Err(e).Uint32("id", id).Msg("could not commit results to database")
+	}
 }
 
-func (w *worker) Enqueue(sub types.Submission, subscribe bool, path string, f io.Reader) (chan interface{}, *list.Element, error) {
+func (o *observer) Enqueue(sub types.Submission, subscribe bool) (chan interface{}, *list.Element, error) {
 	var (
 		c       chan interface{}
 		element *list.Element
 	)
-	if !w.p.RuntimeAvailable(sub.Runtime) {
-		return nil, nil, errs.JudgeNotAvailable
-	}
-	if e := storage.Submission.Write(path, f); e != nil {
-		return nil, nil, e
-	}
-	w.sm.Store(sub.ID, &submissionSubscribers{
+	o.sm.Store(sub.ID, &submissionSubscribers{
 		l: list.New(),
 	})
 	if subscribe {
-		c, element = w.Subscribe(sub)
+		c, element = o.Subscribe(sub, func() interface{} {
+			return nil
+		})
 	}
-	return c, element, w.p.Push(sub, false)
+	return c, element, o.p.Push(sub, false)
 }
 
-func (w *worker) Cancel(id uint32, userId uuid.UUID) error {
-	if !w.p.Cancel(id, userId.String()) {
+func (o *observer) Cancel(id uint32, userId uuid.UUID) error {
+	if !o.p.Cancel(id, userId.String()) {
 		return errors.New("could not cancel specified submission")
 	}
 	return nil
 }
 
-func (w *worker) handleResult(id uint32) func(t types.ResultType, data interface{}) bool {
+func (o *observer) handleResult(id uint32) func(t types.ResultType, data interface{}) bool {
 	lastNonAcVerdict := types.CaseVerdictAccepted
 	return func(t types.ResultType, data interface{}) bool {
 		switch t {
@@ -136,23 +130,23 @@ func (w *worker) handleResult(id uint32) func(t types.ResultType, data interface
 			if _r.Verdict != types.CaseVerdictAccepted {
 				lastNonAcVerdict = _r.Verdict
 			}
-			w.publish(id, _r.CaseID, _r)
+			o.publish(id, _r.CaseID, _r)
 		case types.ResultFinal:
 			var _r types.FinalResult
 			if mapstructure.Decode(data, &_r) != nil {
 				return false
 			}
 			_r.LastNonACVerdict = lastNonAcVerdict
-			w.publish(id, math.MaxUint16, _r)
+			o.publish(id, math.MaxUint16, _r)
 			return true
-		case types.ResultAnnouncement:
-			w.publish(id, math.MaxUint16, data.(uint16))
+		case types.ResultAck:
+			o.publish(id, math.MaxUint16, uint16(0))
 		}
 		return false
 	}
 }
 
-func (w *worker) publish(id uint32, cid uint16, data interface{}) {
+func (o *observer) publish(id uint32, cid uint16, data interface{}) {
 	var d *response = nil
 	switch r := data.(type) {
 	case types.CaseResult:
@@ -163,7 +157,7 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 			Memory:   r.Memory,
 			Duration: r.Duration,
 		}
-		w.p.UpdateResult(id, cr)
+		o.p.UpdateResult(id, cr)
 		d = &response{
 			Type: typeCase,
 			Data: cr,
@@ -172,28 +166,26 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 		fv, p := getFinalVerdict(r)
 		d = &response{
 			Type: typeFinal,
-			Data: fResult{
+			Data: finalJudgement{
 				CompilerOutput: r.CompilerOutput,
 				Verdict:        fv,
 				Points:         p,
-				MaxPoints:      r.MaxPoints,
 			},
 		}
-		w.commitToDb(id, w.p.GetResult(id), r, fv, p)
-		defer w.DestroySubscribers(id)
+		o.commitToDb(id, o.p.GetResults(id), r, fv, p)
+		defer o.DestroySubscribers(id)
 	case uint16:
 		d = &response{
-			Type: typeAnnouncement,
-			Data: data,
+			Type: typeAck,
 		}
 	}
 	if d != nil {
-		subscribers, ok := w.sm.Load(id)
-		if ok {
+		if subscribers, ok := o.sm.Load(id); ok {
 			subscribers.m.RLock()
 			for v := subscribers.l.Front(); v != nil; v = v.Next() {
 				select {
 				case v.Value.(chan interface{}) <- d:
+				default:
 				}
 			}
 			subscribers.m.RUnlock()
@@ -201,35 +193,45 @@ func (w *worker) publish(id uint32, cid uint16, data interface{}) {
 	}
 }
 
-func (w *worker) DestroySubscribers(id uint32) {
-	subscribers, ok := w.sm.Load(id)
+func (o *observer) DestroySubscribers(id uint32) {
+	subscribers, ok := o.sm.Load(id)
 	if !ok {
 		return
 	}
 	subscribers.m.Lock()
-	w.sm.Delete(id)
-	subscribers.m.Unlock()
+	defer subscribers.m.Unlock()
+	o.sm.Delete(id)
 	// iterate over linked list and then close + delete all subscribers
 	for v := subscribers.l.Front(); v != nil; v = v.Next() {
 		close(v.Value.(chan interface{}))
-		subscribers.l.Remove(v)
 	}
+	subscribers.l.Init()
+	subscribers = nil
 }
 
-func (w *worker) Subscribe(sub types.Submission) (chan interface{}, *list.Element) {
-	subscribers, ok := w.sm.Load(sub.ID)
+func (o *observer) Subscribe(sub types.Submission, getData func() interface{}) (chan interface{}, *list.Element) {
+	subscribers, ok := o.sm.Load(sub.ID)
 	if !ok {
 		return nil, nil
 	}
 	subscribers.m.Lock()
+	// acknowledgement + n test case results + final result = n + 2
+	c := make(chan interface{}, sub.TestCount+2)
+	c <- response{
+		Type: typeManifest,
+		Data: manifest{
+			SubmissionID:   sub.ID,
+			TestCount:      sub.TestCount,
+			MaxPoints:      float64(sub.TestCount) * sub.PointsPerTest,
+			AdditionalData: getData(),
+		},
+	}
 	defer subscribers.m.Unlock()
-	// maximum number of messages = compile announcement + n test case announcements + n test case results + final result = (n + 1) * 2
-	c := make(chan interface{}, (sub.TestCount+1)*2)
 	return c, subscribers.l.PushBack(c)
 }
 
-func (w *worker) Unsubscribe(id uint32, e *list.Element) {
-	subscribers, ok := w.sm.Load(id)
+func (o *observer) Unsubscribe(id uint32, e *list.Element) {
+	subscribers, ok := o.sm.Load(id)
 	if !ok {
 		return
 	}
@@ -239,10 +241,14 @@ func (w *worker) Unsubscribe(id uint32, e *list.Element) {
 	subscribers.l.Remove(e)
 }
 
-func (w *worker) RuntimeSupported(rt string) bool {
-	return w.p.RuntimeAvailable(rt)
+func (o *observer) RuntimeSupported(rt string) bool {
+	return o.p.RuntimeAvailable(rt)
 }
 
-func (w *worker) GetJudges() map[string]*polar.JudgeObj {
-	return w.p.GetJudges()
+func (o *observer) GetJudges() map[string]*polar.JudgeObj {
+	return o.p.GetJudges()
+}
+
+func (o *observer) GetResults(id uint32) []contest.CaseResult {
+	return o.p.GetResults(id)
 }

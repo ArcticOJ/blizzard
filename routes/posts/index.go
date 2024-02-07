@@ -2,7 +2,7 @@ package posts
 
 import (
 	"github.com/ArcticOJ/blizzard/v0/db"
-	"github.com/ArcticOJ/blizzard/v0/db/models/post"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/post"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 

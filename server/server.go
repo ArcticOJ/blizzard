@@ -35,6 +35,12 @@ func Register(e *echo.Echo) {
 	}
 	if config.Config.Debug {
 		g.Use(middleware.BodyDump(func(c echo.Context, req, res []byte) {
+			if len(req) > 128 {
+				req = []byte("<payload too long>")
+			}
+			if len(res) > 128 {
+				res = []byte("<payload too long>")
+			}
 			logger.Blizzard.Debug().Str("url", c.Request().RequestURI).Bytes("req", req).Bytes("res", res).Msg("body")
 		}))
 		g.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{

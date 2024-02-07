@@ -1,14 +1,15 @@
 package judge
 
 import (
-	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/contest"
 	"github.com/ArcticOJ/polar/v0/types"
 )
 
 const (
-	typeAnnouncement responseType = "announcement"
-	typeCase                      = "case"
-	typeFinal                     = "final"
+	typeManifest responseType = "manifest"
+	typeAck      responseType = "ack"
+	typeCase     responseType = "case"
+	typeFinal    responseType = "final"
 )
 
 type (
@@ -16,14 +17,20 @@ type (
 	// response with type to distinguish response types
 	response struct {
 		Type responseType `json:"type"`
-		Data interface{}  `json:"data"`
+		Data interface{}  `json:"data,omitempty"`
 	}
-	// final result for responding to clients
-	fResult struct {
+	manifest struct {
+		SubmissionID uint32  `json:"submissionId"`
+		TestCount    uint16  `json:"testCount"`
+		MaxPoints    float64 `json:"maxPoints"`
+		// for initial payload
+		AdditionalData interface{} `json:"additionalData,omitempty"`
+	}
+	// final judgement for responding to clients
+	finalJudgement struct {
 		CompilerOutput string          `json:"compilerOutput"`
 		Verdict        contest.Verdict `json:"verdict"`
 		Points         float64         `json:"points"`
-		MaxPoints      float64         `json:"maxPoints"`
 	}
 )
 

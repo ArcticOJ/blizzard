@@ -8,10 +8,9 @@ import (
 )
 
 type OAuthConnection struct {
-	ID            string    `bun:",pk" json:"-"`
-	Provider      string    `bun:",pk,unique:provider,notnull" json:"provider"`
+	Provider      string    `bun:",pk,notnull" json:"provider"`
 	Username      string    `bun:",notnull" json:"username"`
-	UserID        uuid.UUID `bun:",type:uuid,unique:provider" json:"-"`
+	UserID        uuid.UUID `bun:",pk,type:uuid,notnull" json:"-"`
 	ShowInProfile bool      `bun:",default:true" json:"-"`
 }
 

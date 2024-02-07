@@ -2,22 +2,24 @@ package seed
 
 import (
 	"context"
-	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
-	"github.com/ArcticOJ/blizzard/v0/db/models/post"
-	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/contest"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/post"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/user"
 	"github.com/uptrace/bun"
 )
 
 var intermediaryModels = []any{
 	(*contest.ContestToOrganizer)(nil),
 	(*contest.ContestToProblem)(nil),
-	(*user.UserToRole)(nil),
+	(*user.RoleMembership)(nil),
+	(*user.OrgMembership)(nil),
 }
 
 var models = []any{
 	(*user.User)(nil),
 	(*user.OAuthConnection)(nil),
 	(*user.Role)(nil),
+	(*user.Organization)(nil),
 
 	(*contest.Contest)(nil),
 	(*contest.Problem)(nil),

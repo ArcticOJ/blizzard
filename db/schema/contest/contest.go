@@ -1,12 +1,12 @@
 package contest
 
 import (
-	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/user"
 )
 
 type (
 	Contest struct {
-		ID         uint32      `bun:",pk,autoincrement" json:"id"`
+		ID         uint32      `bun:",pk" json:"id"`
 		Title      string      `bun:",notnull" json:"title"`
 		Tags       []string    `bun:",array" json:"tags"`
 		Organizers []user.User `bun:"m2m:contest_to_organizers,join:Contest=User"`

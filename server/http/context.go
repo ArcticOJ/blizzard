@@ -37,6 +37,7 @@ func (ctx Context) Arr(arr ...interface{}) Response {
 func (ctx Context) StreamResponse() *ResponseStream {
 	r := ctx.Response()
 	h := r.Header()
+	h.Set("X-Streamed", "true")
 	h.Set("Transfer-Encoding", "chunked")
 	h.Set("Connection", "keep-alive")
 	r.WriteHeader(http.StatusOK)

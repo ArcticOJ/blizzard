@@ -1,7 +1,7 @@
 package contest
 
 import (
-	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/user"
 	"github.com/google/uuid"
 )
 
@@ -11,14 +11,14 @@ type (
 		Tags          []string     `bun:",array" json:"tags"`
 		Source        string       `json:"source"`
 		AuthorID      uuid.UUID    `bun:",type:uuid" json:"authorID,omitempty"`
-		Author        *user.User   `bun:"rel:has-one,join:author_id=id" json:"-"`
+		Author        *user.User   `bun:",rel:has-one,join:author_id=id" json:"-"`
 		Title         string       `bun:",notnull" json:"title,omitempty"`
 		ContentType   ContentType  `json:"contentType"`
-		Content       interface{}  `bun:"type:jsonb" json:"content,omitempty"`
-		Constraints   *Constraints `bun:"embed:" json:"constraints,omitempty"`
+		Content       interface{}  `bun:",type:jsonb" json:"content,omitempty"`
+		Constraints   *Constraints `bun:",embed:" json:"constraints,omitempty"`
 		TestCount     uint16       `bun:",notnull" json:"testCount,omitempty"`
 		PointsPerTest float64      `bun:",default:1" json:"pointPerTest,omitempty"`
-		Submissions   []Submission `bun:"rel:has-many,join:id=problem_id" json:"submissions,omitempty"`
+		Submissions   []Submission `bun:",rel:has-many,join:id=problem_id" json:"submissions,omitempty"`
 	}
 
 	SampleTestCases struct {

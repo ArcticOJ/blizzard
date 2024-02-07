@@ -10,7 +10,7 @@ import (
 var hmacHash hash.Hash
 
 func init() {
-	hmacHash = hmac.New(sha256.New, []byte(config.Config.Blizzard.PrivateKey))
+	hmacHash = hmac.New(sha256.New, []byte(config.Config.Blizzard.Secret))
 }
 
 func Hash(buf []byte) []byte {

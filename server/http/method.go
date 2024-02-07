@@ -6,10 +6,10 @@ type Method = string
 
 const (
 	Get    Method = http.MethodGet
-	Post          = http.MethodPost
-	Patch         = http.MethodPatch
-	Delete        = http.MethodDelete
-	Put           = http.MethodPut
+	Post   Method = http.MethodPost
+	Patch  Method = http.MethodPatch
+	Delete Method = http.MethodDelete
+	Put    Method = http.MethodPut
 )
 
 func MethodFromString(method string) Method {

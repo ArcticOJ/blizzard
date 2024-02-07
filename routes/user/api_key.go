@@ -3,7 +3,7 @@ package user
 import (
 	"encoding/base64"
 	"github.com/ArcticOJ/blizzard/v0/db"
-	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/user"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/ArcticOJ/blizzard/v0/utils"
 	"github.com/labstack/echo/v4"

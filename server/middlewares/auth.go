@@ -12,16 +12,16 @@ import (
 func Authentication() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			//if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
-			//	authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
-			//	if len(authToken) > 0 {
-			//		var usr user.User
-			//		if e := db.Database.NewSelect().Model(&usr).Where("api_key = ?", authToken).Column("id").Scan(c.Request().Context()); e == nil {
-			//			c.Set("user", usr.ID)
-			//			return next(c)
-			//		}
-			//	}
-			//}
+			// TODO: implement a key -> id resolver / user validator
+			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
+				authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
+				if len(authToken) > 0 {
+					if uid := stores.Users.ResolveApiKey(c.Request().Context(), authToken); uid != uuid.Nil {
+						c.Set("id", uid)
+						return next(c)
+					}
+				}
+			}
 			ctx := &http.Context{
 				Context: c,
 			}

@@ -17,5 +17,5 @@ func CancelSubmission(ctx *http.Context) http.Response {
 	if e != nil {
 		return ctx.Bad("Invalid ID.")
 	}
-	return ctx.Respond(judge.Worker.Cancel(uint32(id), ctx.GetUUID()))
+	return ctx.Respond(judge.Observer.Cancel(uint32(id), ctx.GetUUID()))
 }

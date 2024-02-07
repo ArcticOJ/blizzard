@@ -6,5 +6,5 @@ import (
 )
 
 func Status(ctx *http.Context) http.Response {
-	return ctx.Respond(judge.Worker.GetJudges())
+	return ctx.Respond(judge.Observer.GetJudges())
 }

@@ -2,7 +2,7 @@ package oauth
 
 import (
 	"github.com/ArcticOJ/blizzard/v0/db"
-	"github.com/ArcticOJ/blizzard/v0/db/models/user"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/user"
 	"github.com/ArcticOJ/blizzard/v0/logger/debug"
 	"github.com/ArcticOJ/blizzard/v0/oauth"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
@@ -27,7 +27,6 @@ func Index(ctx *http.Context) http.Response {
 		debug.Dump(c)
 		for _, p := range c {
 			m[p.Provider] = connection{
-				ID:       p.ID,
 				Username: p.Username,
 			}
 		}

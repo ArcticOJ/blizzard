@@ -15,7 +15,7 @@ var (
 
 func init() {
 	var e error
-	key, e = paseto.V4SymmetricKeyFromHex(config.Config.Blizzard.PrivateKey)
+	key, e = paseto.V4SymmetricKeyFromHex(config.Config.Blizzard.Secret)
 	logger.Panic(e, "failed to decode hex-encoded private key from config, please regenerate another one using cmd/generator")
 	parser = paseto.NewParser()
 }

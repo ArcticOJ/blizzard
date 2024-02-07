@@ -1,4 +1,4 @@
-// TODO: complete submit route
+// TODO: finalize submit route
 
 package problems
 
@@ -6,7 +6,7 @@ import (
 	"container/list"
 	"context"
 	"github.com/ArcticOJ/blizzard/v0/db"
-	"github.com/ArcticOJ/blizzard/v0/db/models/contest"
+	"github.com/ArcticOJ/blizzard/v0/db/schema/contest"
 	"github.com/ArcticOJ/blizzard/v0/judge"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/ArcticOJ/blizzard/v0/storage"
@@ -42,22 +42,17 @@ func getExt(fileName string) string {
 	return strings.ToLower(strings.TrimLeft(path.Ext(fileName), "."))
 }
 
-func createSubmission(ctx context.Context, userId uuid.UUID, problem, runtime string, ext string) (*contest.Submission, func() error, func() error) {
+func createSubmission(ctx context.Context, userId uuid.UUID, problem, runtime string, fileName string) (*contest.Submission, error) {
 	sub := &contest.Submission{
 		AuthorID:  userId,
 		ProblemID: problem,
 		Runtime:   runtime,
-		Extension: ext,
+		FileName:  path.Base(fileName),
 	}
-	tx, e := db.Database.Begin()
-	if e != nil {
-		return nil, nil, nil
+	if _, e := db.Database.NewInsert().Model(sub).Returning("id, submitted_at, author_id").Exec(ctx); e != nil {
+		return nil, e
 	}
-	if _, e = tx.NewInsert().Model(sub).Returning("id, submitted_at", "author_id").Exec(ctx); e != nil {
-		tx.Rollback()
-		return nil, nil, nil
-	}
-	return sub, tx.Rollback, tx.Commit
+	return sub, nil
 }
 
 func Submit(ctx *http.Context) http.Response {
@@ -92,24 +87,28 @@ func Submit(ctx *http.Context) http.Response {
 	if len(problem.Constraints.AllowedRuntimes) > 0 && !slices.Contains(problem.Constraints.AllowedRuntimes, rt) {
 		return ctx.Bad("This runtime is not allowed by current problem.")
 	}
-	if !judge.Worker.RuntimeSupported(rt) {
+	if !judge.Observer.RuntimeSupported(rt) {
 		return ctx.InternalServerError("No judge server is available to handle this submission.")
 	}
-	dbSub, rollback, commit := createSubmission(ctx.Request().Context(), ctx.GetUUID(), problem.ID, rt, ext)
+	// create a random file name for this submission
+	fName := storage.Submission.Create(ext)
+	// try writing source code to previously generated file
+	e, rollback := storage.Submission.Write(fName, f)
+	if e != nil {
+		return ctx.InternalServerError("Failed to write uploaded source code to disk.")
+	}
+	// write to database
+	dbSub, _ := createSubmission(ctx.Request().Context(), ctx.GetUUID(), problem.ID, rt, fName)
 	if dbSub == nil {
-		return ctx.Bad("Failed to create submission!")
-	}
-	// generate a path for storing source code for this submission
-	p := storage.Submission.Create(dbSub.ID, ext)
-	// convert submission model to a polar-compatible one
-	sub := prepare(dbSub.ID, p, rt, dbSub.AuthorID, &problem)
-	if res, element, e = judge.Worker.Enqueue(sub, shouldStream, p, f); e != nil {
-		judge.Worker.DestroySubscribers(sub.ID)
 		rollback()
-		return ctx.InternalServerError("Failed to process your submission.")
+		return ctx.InternalServerError("Failed to commit current submission to database.")
 	}
-	if commit() != nil {
-		return ctx.InternalServerError("Could not save submission to database.")
+	// convert submission model to a polar-compatible one
+	sub := prepare(dbSub.ID, fName, rt, dbSub.AuthorID, &problem)
+	if res, element, e = judge.Observer.Enqueue(sub, shouldStream); e != nil {
+		rollback()
+		judge.Observer.DestroySubscribers(sub.ID)
+		return ctx.InternalServerError("Failed to process your submission.")
 	}
 	if shouldStream && res != nil {
 		stream := ctx.StreamResponse()
@@ -117,16 +116,14 @@ func Submit(ctx *http.Context) http.Response {
 		for {
 			select {
 			case <-done:
-				judge.Worker.Unsubscribe(sub.ID, element)
+				judge.Observer.Unsubscribe(sub.ID, element)
 				return nil
 			case r, more := <-res:
-				if !more {
+				if !more || stream.Write(r) != nil {
 					return nil
 				}
-				stream.Write(r)
 			}
 		}
-		return ctx.Success()
 	} else {
 		return ctx.Respond(dbSub.ID)
 	}
