@@ -9,10 +9,8 @@ import (
 	"slices"
 )
 
+// Unlink DELETE /:provider @auth
 func Unlink(ctx *http.Context) http.Response {
-	if ctx.RequireAuth() {
-		return nil
-	}
 	prov := ctx.Param("provider")
 	id := ctx.QueryParam("id")
 	if len(id) == 0 {

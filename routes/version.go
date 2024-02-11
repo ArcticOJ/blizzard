@@ -1,4 +1,4 @@
-package apex
+package routes
 
 import (
 	"github.com/ArcticOJ/blizzard/v0/build"
@@ -7,7 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Version(ctx *http.Context) http.Response {
+// GetVersion GET /version
+func GetVersion(ctx *http.Context) http.Response {
 	return ctx.Respond(echo.Map{
 		"brand":     config.Config.Brand,
 		"buildDate": build.Date,

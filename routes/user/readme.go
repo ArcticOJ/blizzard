@@ -6,7 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func Readme(ctx *http.Context) http.Response {
+// GetReadme GET /:id/readme
+func GetReadme(ctx *http.Context) http.Response {
 	uid, e := uuid.Parse(ctx.Param("id"))
 	if e != nil {
 		return ctx.Bad("Failed to parse UUID.")

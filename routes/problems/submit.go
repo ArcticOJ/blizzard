@@ -55,22 +55,20 @@ func createSubmission(ctx context.Context, userId uuid.UUID, problem, runtime st
 	return sub, nil
 }
 
-func Submit(ctx *http.Context) http.Response {
+// SubmitSolution POST /:id/submit @auth
+func SubmitSolution(ctx *http.Context) http.Response {
 	var (
 		res     chan interface{}
 		element *list.Element
 		e       error
 	)
-	if ctx.RequireAuth() {
-		return nil
-	}
 	code, e := ctx.FormFile("code")
 	shouldStream := ctx.FormValue("stream") == "true"
 	if e != nil {
 		return ctx.Bad("No source code.")
 	}
 	rt := ctx.FormValue("runtime")
-	id := ctx.Param("problem")
+	id := ctx.Param("id")
 	var problem contest.Problem
 	// get file extension
 	ext := getExt(code.Filename)

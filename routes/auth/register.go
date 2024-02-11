@@ -21,6 +21,7 @@ type registerRequest struct {
 
 // TODO: Validate req before processing
 
+// Register POST /register
 func Register(ctx *http.Context) http.Response {
 	var req registerRequest
 	if ctx.Bind(&req) != nil {

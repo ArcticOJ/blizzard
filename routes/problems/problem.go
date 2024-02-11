@@ -5,7 +5,8 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 
-func Problem(ctx *http.Context) http.Response {
+// GetProblem GET /:id
+func GetProblem(ctx *http.Context) http.Response {
 	id := ctx.Param("problem")
 	if p := stores.Problems.Get(ctx.Request().Context(), id); p != nil {
 		return ctx.Respond(p)

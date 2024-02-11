@@ -57,6 +57,7 @@ func HandleLogin(ctx *http.Context, provider string, res *providers.UserInfo, st
 	return nil
 }
 
+// Validate POST /:provider
 func Validate(ctx *http.Context) http.Response {
 	name := ctx.Param("provider")
 	if prov, ok := oauth.Conf[name]; ok {
@@ -101,13 +102,11 @@ func Validate(ctx *http.Context) http.Response {
 			if r := HandleLink(ctx, name, res); r != nil {
 				return r
 			}
-			break
 		case "login":
 			// TODO: login callback url
 			if r := HandleLogin(ctx, name, res, state); r != nil {
 				return r
 			}
-			break
 		}
 		return ctx.Respond(echo.Map{
 			"action": action,

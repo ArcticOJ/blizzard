@@ -1,10 +1,21 @@
 package http
 
-type Handler func(ctx *Context) Response
+type (
+	Handler   func(ctx *Context) Response
+	RouteFlag = uint8
+	Route     struct {
+		Path    string
+		Method  Method
+		Flags   RouteFlag
+		Handler Handler
+	}
+)
 
-type RouteMap map[string]Route
+const (
+	// RouteAuth Protect this auth with authentication
+	RouteAuth RouteFlag = 1 << iota
+)
 
-type Route struct {
-	Methods []Method
-	Handler
+func (r *Route) HasFlag(flag RouteFlag) bool {
+	return r.Flags&flag == flag
 }

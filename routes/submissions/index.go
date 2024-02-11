@@ -6,7 +6,8 @@ import (
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 )
 
-func Submissions(ctx *http.Context) http.Response {
+// GetSubmissions GET /
+func GetSubmissions(ctx *http.Context) http.Response {
 	var submissions []contest.Submission
 	if db.Database.NewSelect().
 		Model(&submissions).

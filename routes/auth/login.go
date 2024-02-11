@@ -16,6 +16,7 @@ type loginRequest struct {
 
 // TODO: Validate req before processing
 
+// Login POST /login
 func Login(ctx *http.Context) http.Response {
 	var req loginRequest
 	if ctx.Bind(&req) != nil {

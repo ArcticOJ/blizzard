@@ -5,23 +5,23 @@ import "net/http"
 type Method = string
 
 const (
-	Get    Method = http.MethodGet
-	Post   Method = http.MethodPost
-	Patch  Method = http.MethodPatch
-	Delete Method = http.MethodDelete
-	Put    Method = http.MethodPut
+	GET    Method = http.MethodGet
+	POST   Method = http.MethodPost
+	PATCH  Method = http.MethodPatch
+	DELETE Method = http.MethodDelete
+	PUT    Method = http.MethodPut
 )
 
 func MethodFromString(method string) Method {
 	switch method {
 	case http.MethodPost:
-		return Post
+		return POST
 	case http.MethodPatch:
-		return Patch
+		return PATCH
 	case http.MethodDelete:
-		return Delete
+		return DELETE
 	case http.MethodPut:
-		return Put
+		return PUT
 	}
-	return Get
+	return GET
 }

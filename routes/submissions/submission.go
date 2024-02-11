@@ -9,11 +9,9 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func Submission(ctx *http.Context) http.Response {
-	if ctx.RequireAuth() {
-		return nil
-	}
-	id := ctx.Param("submission")
+// GetSubmission GET /:id @auth
+func GetSubmission(ctx *http.Context) http.Response {
+	id := ctx.Param("id")
 	s := new(contest.Submission)
 	if db.Database.NewSelect().Model(s).Where("submission.id = ?", id).Relation("Problem", func(query *bun.SelectQuery) *bun.SelectQuery {
 		return query.Column("id", "title")

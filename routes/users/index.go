@@ -9,7 +9,8 @@ import (
 	"strconv"
 )
 
-func Index(ctx *http.Context) http.Response {
+// GetUsers GET /
+func GetUsers(ctx *http.Context) http.Response {
 	page := ctx.QueryParam("page")
 	var (
 		p uint32 = 1

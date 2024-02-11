@@ -11,12 +11,15 @@ import (
 	nethttp "net/http"
 )
 
-func createHandler(handler http.Handler) echo.HandlerFunc {
+func createHandler(route http.Route) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx := &http.Context{
 			Context: c,
 		}
-		res := handler(ctx)
+		if route.HasFlag(http.RouteAuth) && ctx.RequireAuth() {
+			return nil
+		}
+		res := route.Handler(ctx)
 		if ctx.Response().Committed {
 			return nil
 		}
@@ -56,20 +59,7 @@ func Register(e *echo.Echo) {
 			},
 		}))
 	}
-	for route, group := range routes.Map {
-		_g := g.Group(route)
-		// TODO: allow middlewares
-		for r, sub := range group {
-			handler := createHandler(sub.Handler)
-			if route == "/" {
-				// add handler for root routes like /api/user/index
-				g.Match(sub.Methods, r, handler)
-			} else if r == "/" {
-				// handle apex routes like /api/version
-				g.Match(sub.Methods, route, handler)
-			} else {
-				_g.Match(sub.Methods, r, handler)
-			}
-		}
+	for _, route := range routes.Map {
+		g.Add(route.Method, route.Path, createHandler(route))
 	}
 }

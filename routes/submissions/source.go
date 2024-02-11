@@ -8,11 +8,9 @@ import (
 	"path"
 )
 
-func Source(ctx *http.Context) http.Response {
-	if ctx.RequireAuth() {
-		return nil
-	}
-	id := ctx.Param("submission")
+// GetSourceCode GET /:id/source @auth
+func GetSourceCode(ctx *http.Context) http.Response {
+	id := ctx.Param("id")
 	s := new(contest.Submission)
 	if db.Database.NewSelect().Model(s).Where("id = ?", id).Column("id", "author_id", "file_name", "problem_id").Scan(ctx.Request().Context()) != nil {
 		return ctx.NotFound("Submission not found.")

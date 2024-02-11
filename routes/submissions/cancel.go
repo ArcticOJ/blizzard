@@ -9,11 +9,9 @@ import (
 // TODO: broadcast cancel request to all judges
 // TODO: add authorization
 
+// CancelSubmission POST /:id/cancel @auth
 func CancelSubmission(ctx *http.Context) http.Response {
-	if ctx.RequireAuth() {
-		return nil
-	}
-	id, e := strconv.ParseUint(ctx.Param("submission"), 10, 32)
+	id, e := strconv.ParseUint(ctx.Param("id"), 10, 32)
 	if e != nil {
 		return ctx.Bad("Invalid ID.")
 	}

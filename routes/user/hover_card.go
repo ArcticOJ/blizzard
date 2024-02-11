@@ -6,7 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func HoverCard(ctx *http.Context) http.Response {
+// GetHoverCard GET /:handle/hoverCard
+func GetHoverCard(ctx *http.Context) http.Response {
 	handle := ctx.Param("handle")
 	u := stores.Users.Get(ctx.Request().Context(), uuid.Nil, handle)
 	if u == nil || u.ID == uuid.Nil {

@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+// CreateUrl GET /:provider
 func CreateUrl(ctx *http.Context) http.Response {
 	if prov, ok := oauth.Conf[ctx.Param("provider")]; ok {
 		// 0 is false, 1 is true
