@@ -59,7 +59,14 @@ func Register(e *echo.Echo) {
 			},
 		}))
 	}
-	for _, route := range routes.Map {
-		g.Add(route.Method, route.Path, createHandler(route))
+	for group, _routes := range routes.Map {
+		curGroup := g
+		// create a dedicated group for non-apex routes
+		if group != "/" {
+			curGroup = g.Group("/" + group)
+		}
+		for _, route := range _routes {
+			curGroup.Add(route.Method, route.Path, createHandler(route))
+		}
 	}
 }
