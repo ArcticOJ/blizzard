@@ -25,7 +25,7 @@ var Map = map[string][]http.Route{
 			Method:  http.GET,
 		},
 	},
-	"auth": []http.Route{
+	"/auth": []http.Route{
 		{
 			Path:    "/login",
 			Handler: auth.Login,
@@ -42,11 +42,16 @@ var Map = map[string][]http.Route{
 			Method:  http.POST,
 		},
 	},
-	"contests": []http.Route{},
-	"oauth": []http.Route{
+	"/contests": []http.Route{},
+	"/oauth": []http.Route{
 		{
 			Path:    "",
 			Handler: oauth.GetProviders,
+			Method:  http.GET,
+		},
+		{
+			Path:    "/:provider",
+			Handler: oauth.CreateUrl,
 			Method:  http.GET,
 		},
 		{
@@ -61,25 +66,20 @@ var Map = map[string][]http.Route{
 			Method:  http.POST,
 		},
 		{
-			Path:    "/:provider",
-			Handler: oauth.CreateUrl,
-			Method:  http.GET,
-		},
-		{
 			Path:    "/connections",
 			Handler: oauth.GetConnections,
 			Method:  http.GET,
 			Flags:   http.RouteAuth,
 		},
 	},
-	"posts": []http.Route{
+	"/posts": []http.Route{
 		{
 			Path:    "",
 			Handler: posts.GetPosts,
 			Method:  http.GET,
 		},
 	},
-	"problems": []http.Route{
+	"/problems": []http.Route{
 		{
 			Path:    "",
 			Handler: problems.GetProblems,
@@ -97,7 +97,7 @@ var Map = map[string][]http.Route{
 			Flags:   http.RouteAuth,
 		},
 	},
-	"submissions": []http.Route{
+	"/submissions": []http.Route{
 		{
 			Path:    "",
 			Handler: submissions.GetSubmissions,
@@ -122,7 +122,7 @@ var Map = map[string][]http.Route{
 			Flags:   http.RouteAuth,
 		},
 	},
-	"user": []http.Route{
+	"/user": []http.Route{
 		{
 			Path:    "",
 			Handler: user.GetUser,
@@ -157,7 +157,7 @@ var Map = map[string][]http.Route{
 			Flags:   http.RouteAuth,
 		},
 	},
-	"users": []http.Route{
+	"/users": []http.Route{
 		{
 			Path:    "",
 			Handler: users.GetUsers,

@@ -63,7 +63,7 @@ func Register(e *echo.Echo) {
 		curGroup := g
 		// create a dedicated group for non-apex routes
 		if group != "/" {
-			curGroup = g.Group("/" + group)
+			curGroup = g.Group(group)
 		}
 		for _, route := range _routes {
 			curGroup.Add(route.Method, route.Path, createHandler(route))
