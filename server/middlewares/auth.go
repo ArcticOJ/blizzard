@@ -12,7 +12,6 @@ import (
 func Authentication() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// TODO: implement a key -> id resolver / user validator
 			if authHeader := c.Request().Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer") {
 				authToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 				if len(authToken) > 0 {
