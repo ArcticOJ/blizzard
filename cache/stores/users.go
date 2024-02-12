@@ -360,7 +360,7 @@ func (*userStore) Get(ctx context.Context, id uuid.UUID, handle string, columns 
 	if id == uuid.Nil && handle == "" {
 		return nil
 	}
-	if e := db.Database.NewSelect().
+	q := db.Database.NewSelect().
 		Model(u).
 		Column(columns...).
 		ColumnExpr("MD5(email) AS avatar").
@@ -369,10 +369,13 @@ func (*userStore) Get(ctx context.Context, id uuid.UUID, handle string, columns 
 		}).
 		Relation("Organizations", func(query *bun.SelectQuery) *bun.SelectQuery {
 			return query.Order("joined_at ASC")
-		}).
-		Where("id = ?", id).
-		WhereOr("handle = ?", handle).
-		Scan(ctx); e != nil {
+		})
+	if handle == "" {
+		q = q.Where("id = ?", id)
+	} else {
+		q = q.Where("handle = ?", handle)
+	}
+	if e := q.Scan(ctx); e != nil {
 		logger.Blizzard.Error().Err(e).
 			Stringer("id", id).
 			Str("handle", handle).

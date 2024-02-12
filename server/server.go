@@ -66,7 +66,13 @@ func Register(e *echo.Echo) {
 			curGroup = g.Group(group)
 		}
 		for _, route := range _routes {
-			curGroup.Add(route.Method, route.Path, createHandler(route))
+			handler := createHandler(route)
+			// treat routes like /api/users as apex endpoints
+			if route.Path == "/" {
+				g.Add(route.Method, group, handler)
+			} else {
+				curGroup.Add(route.Method, group, handler)
+			}
 		}
 	}
 }

@@ -45,7 +45,7 @@ var Map = map[string][]http.Route{
 	"/contests": []http.Route{},
 	"/oauth": []http.Route{
 		{
-			Path:    "",
+			Path:    "/",
 			Handler: oauth.GetProviders,
 			Method:  http.GET,
 		},
@@ -74,14 +74,14 @@ var Map = map[string][]http.Route{
 	},
 	"/posts": []http.Route{
 		{
-			Path:    "",
+			Path:    "/",
 			Handler: posts.GetPosts,
 			Method:  http.GET,
 		},
 	},
 	"/problems": []http.Route{
 		{
-			Path:    "",
+			Path:    "/",
 			Handler: problems.GetProblems,
 			Method:  http.GET,
 		},
@@ -99,7 +99,7 @@ var Map = map[string][]http.Route{
 	},
 	"/submissions": []http.Route{
 		{
-			Path:    "",
+			Path:    "/",
 			Handler: submissions.GetSubmissions,
 			Method:  http.GET,
 		},
@@ -124,7 +124,7 @@ var Map = map[string][]http.Route{
 	},
 	"/user": []http.Route{
 		{
-			Path:    "",
+			Path:    "/",
 			Handler: user.GetUser,
 			Method:  http.GET,
 			Flags:   http.RouteAuth,
@@ -159,7 +159,7 @@ var Map = map[string][]http.Route{
 	},
 	"/users": []http.Route{
 		{
-			Path:    "",
+			Path:    "/",
 			Handler: users.GetUsers,
 			Method:  http.GET,
 		},
