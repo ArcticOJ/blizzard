@@ -51,6 +51,11 @@ var Map = map[string][]http.Route{
 		},
 		{
 			Path:    "/:provider",
+			Handler: oauth.Validate,
+			Method:  http.POST,
+		},
+		{
+			Path:    "/:provider",
 			Handler: oauth.CreateUrl,
 			Method:  http.GET,
 		},
@@ -59,11 +64,6 @@ var Map = map[string][]http.Route{
 			Handler: oauth.Unlink,
 			Method:  http.DELETE,
 			Flags:   http.RouteAuth,
-		},
-		{
-			Path:    "/:provider",
-			Handler: oauth.Validate,
-			Method:  http.POST,
 		},
 		{
 			Path:    "/connections",

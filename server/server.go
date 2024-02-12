@@ -71,7 +71,7 @@ func Register(e *echo.Echo) {
 			if route.Path == "/" {
 				g.Add(route.Method, group, handler)
 			} else {
-				curGroup.Add(route.Method, group, handler)
+				curGroup.Add(route.Method, route.Path, handler)
 			}
 		}
 	}

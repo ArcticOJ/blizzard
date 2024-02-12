@@ -7,7 +7,7 @@ import (
 
 // GetProblem GET /:id
 func GetProblem(ctx *http.Context) http.Response {
-	id := ctx.Param("problem")
+	id := ctx.Param("id")
 	if p := stores.Problems.Get(ctx.Request().Context(), id); p != nil {
 		return ctx.Respond(p)
 	}
