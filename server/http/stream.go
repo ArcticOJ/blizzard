@@ -3,17 +3,21 @@ package http
 import (
 	"encoding/json"
 	"github.com/labstack/echo/v4"
+	"github.com/yudppp/throttle"
+	"time"
 )
 
 type ResponseStream struct {
-	encoder *json.Encoder
-	stream  *echo.Response
+	encoder  *json.Encoder
+	stream   *echo.Response
+	throttle throttle.Throttler
 }
 
-func NewStream(response *echo.Response) *ResponseStream {
+func NewStream(response *echo.Response, interval time.Duration) *ResponseStream {
 	return &ResponseStream{
-		encoder: json.NewEncoder(response),
-		stream:  response,
+		encoder:  json.NewEncoder(response),
+		stream:   response,
+		throttle: throttle.New(interval),
 	}
 }
 
@@ -22,7 +26,7 @@ func (rs *ResponseStream) Write(obj interface{}) error {
 	if e != nil {
 		return e
 	}
-	rs.Flush()
+	rs.throttle.Do(rs.Flush)
 	return nil
 }
 

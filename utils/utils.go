@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"cmp"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -46,4 +47,8 @@ func ParseInt(s string) int {
 		return 0
 	}
 	return v
+}
+
+func Coarse[T cmp.Ordered](lower, x, upper T) T {
+	return max(lower, min(x, upper))
 }

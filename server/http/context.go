@@ -34,14 +34,14 @@ func (ctx Context) Arr(arr ...interface{}) Response {
 	return ctx.Respond(arr)
 }
 
-func (ctx Context) StreamResponse() *ResponseStream {
+func (ctx Context) StreamResponse(flushInterval time.Duration) *ResponseStream {
 	r := ctx.Response()
 	h := r.Header()
 	h.Set("X-Streamed", "true")
 	h.Set("Transfer-Encoding", "chunked")
 	h.Set("Connection", "keep-alive")
 	r.WriteHeader(http.StatusOK)
-	return NewStream(r)
+	return NewStream(r, flushInterval)
 }
 
 func (ctx Context) Bad(message string, context ...interface{}) Response {

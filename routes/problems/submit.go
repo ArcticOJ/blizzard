@@ -13,6 +13,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 )
 
 func prepare(id uint32, _path, runtime string, userId uuid.UUID, problem *contest.Problem) types.Submission {
@@ -107,8 +108,9 @@ func SubmitSolution(ctx *http.Context) http.Response {
 		return ctx.InternalServerError("Failed to process your submission.")
 	}
 	if shouldStream && res != nil {
-		stream := ctx.StreamResponse()
+		stream := ctx.StreamResponse(100 * time.Millisecond)
 		done := ctx.Request().Context().Done()
+		defer stream.Flush()
 		for {
 			select {
 			case <-done:
