@@ -3,7 +3,6 @@ package server
 import (
 	"github.com/ArcticOJ/blizzard/v0/config"
 	"github.com/ArcticOJ/blizzard/v0/logger"
-	"github.com/ArcticOJ/blizzard/v0/routes"
 	"github.com/ArcticOJ/blizzard/v0/server/http"
 	"github.com/ArcticOJ/blizzard/v0/server/middlewares"
 	"github.com/labstack/echo/v4"
@@ -44,7 +43,7 @@ func Register(e *echo.Echo) {
 			if len(res) > 128 {
 				res = []byte("<payload too long>")
 			}
-			logger.Blizzard.Debug().Str("url", c.Request().RequestURI).Bytes("req", req).Bytes("res", res).Msg("body")
+			logger.Blizzard.Debug().Str("url", c.Request().RequestURI).Bytes("req", req).Bytes("res", res).Int("req_size", len(req)).Int("res_size", len(res)).Msg("body")
 		}))
 		g.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 			LogURI:    true,
@@ -59,7 +58,7 @@ func Register(e *echo.Echo) {
 			},
 		}))
 	}
-	for group, _routes := range routes.Map {
+	for group, _routes := range Map {
 		curGroup := g
 		// create a dedicated group for non-apex routes
 		if group != "/" {

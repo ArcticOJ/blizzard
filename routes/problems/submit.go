@@ -108,7 +108,7 @@ func SubmitSolution(ctx *http.Context) http.Response {
 		return ctx.InternalServerError("Failed to process your submission.")
 	}
 	if shouldStream && res != nil {
-		stream := ctx.StreamResponse(100 * time.Millisecond)
+		stream := ctx.StreamResponse(200 * time.Millisecond)
 		done := ctx.Request().Context().Done()
 		defer stream.Flush()
 		for {

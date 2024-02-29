@@ -34,7 +34,7 @@ func GetSubmission(ctx *http.Context) http.Response {
 	if resChan == nil {
 		return ctx.Respond(s)
 	}
-	stream := ctx.StreamResponse(100 * time.Millisecond)
+	stream := ctx.StreamResponse(200 * time.Millisecond)
 	done := ctx.Request().Context().Done()
 	defer stream.Flush()
 	for {
