@@ -13,6 +13,6 @@ func GetVersion(ctx *http.Context) http.Response {
 		"brand":     config.Config.Brand,
 		"buildDate": build.Date,
 		"buildHash": build.Hash,
-		"version":   build.Version,
+		"version":   build.Tag,
 	})
 }

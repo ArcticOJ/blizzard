@@ -8,9 +8,8 @@ import (
 
 func Init(ctx context.Context) {
 	judge.Init(ctx)
-	cron.Start(ctx)
 }
 
-func Destroy() {
+func Destroy(_ context.Context) {
 	cron.Stop()
 }
